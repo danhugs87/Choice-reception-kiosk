@@ -4,11 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Choice Wellbeing Reception Terminal</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #ffffff; /* Stark white background */
+            background-color: #ffffff; /* Clean white backdrop */
             color: #2d3748;
             margin: 0;
             display: flex;
@@ -23,52 +22,86 @@
             width: 90%;
             max-width: 500px;
             background-color: #ffffff;
-            padding: 20px;
+            padding: 10px;
         }
         /* Logo Styles */
         .logo-container {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .logo-container img {
-            max-width: 260px; /* Perfect sizing for the logo icon/text combination */
+            max-width: 240px; 
             height: auto;
         }
         h1 { 
             font-size: 26px; 
             color: #1a202c; 
             font-weight: 600; 
-            margin-bottom: 5px; 
+            margin: 0 0 8px 0; 
         }
         p { 
             color: #4a5568; 
-            font-size: 15px; 
-            margin-bottom: 30px; 
+            font-size: 16px; 
+            margin: 0 0 25px 0; 
             font-weight: 300; 
         }
-        /* Camera Feed Container */
-        #reader {
+        /* Interactive Form Elements */
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
             width: 85%;
-            max-width: 340px;
-            margin: 0 auto;
-            border-radius: 20px;
-            overflow: hidden;
-            border: 4px solid #e2e8f0 !important; /* Premium thick frame */
-            background-color: #edf2f7;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-left: auto;
+            margin-right: auto;
         }
-        /* Interactive Scanning Statuses */
-        #status-display {
-            margin-top: 30px;
-            font-size: 22px;
-            font-weight: bold;
-            color: #2f855a; /* Forest green for ready */
-            min-height: 32px;
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #718096;
+            margin-bottom: 6px;
+            text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .status-subtext {
-            font-size: 13px;
-            color: #718096;
-            margin-top: 4px;
+        input, select {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            background-color: #f7fafc;
+            color: #2d3748;
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        input:focus, select:focus {
+            border-color: #2f855a;
+            background-color: #ffffff;
+        }
+        /* Premium Tap Button */
+        .submit-btn {
+            width: 85%;
+            background-color: #2f855a; /* Choice brand accent green */
+            color: #ffffff;
+            border: none;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(47, 133, 90, 0.2);
+            transition: all 0.2s ease;
+            margin-top: 10px;
+        }
+        .submit-btn:active {
+            transform: scale(0.98);
+        }
+        /* Status feedback box */
+        #status-display {
+            margin-top: 25px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #2f855a; 
+            min-height: 32px;
         }
     </style>
 </head>
@@ -77,41 +110,86 @@
     <div id="terminal-card">
         <div class="logo-container">
             <img src="https://raw.githubusercontent.com/danhugs87/Choice-reception-kiosk/main/2.png" alt="Choice Wellbeing Service" onerror="this.style.display='none'; document.getElementById('logo-text').style.display='block';">
-            <h2 id="logo-text" style="display:none; color:#2c4a3e; margin:0; font-size:28px;">CHOICE WELLBEING</h2>
+            <h2 id="logo-text" style="display:none; color:#2c4a3e; margin:0 0 15px 0; font-size:28px; letter-spacing:1px;">CHOICE WELLBEING</h2>
         </div>
         
         <h1>Welcome to Choice Wellbeing Service</h1>
-        <p>Hold your booking QR pass up to the camera frame below</p>
+        <p>Please check in for your appointment below</p>
         
-        <div id="reader"></div>
+        <div id="form-container">
+            <div class="input-group">
+                <label for="client-name">Your Full Name</label>
+                <input type="text" id="client-name" placeholder="e.g. Jane Smith" autocomplete="off">
+            </div>
+
+            <div class="input-group">
+                <label for="staff-select">Who are you here to see?</label>
+                <select id="staff-select">
+                    <option value="" disabled selected>Select a practitioner...</option>
+                    <option value="Tara">Tara</option>
+                    <option value="Louise">Louise</option>
+                    <option value="Tracey">Tracey</option>
+                    <option value="Hayley">Hayley</option>
+                    <option value="Dan">Dan</option>
+                </select>
+            </div>
+
+            <button class="submit-btn" onclick="processManualCheckIn()">Tap to Sign In</button>
+        </div>
         
-        <div id="status-display">Ready to scan...</div>
-        <div class="status-subtext">(Please align your QR code inside the frame)</div>
+        <div id="status-display"></div>
     </div>
 
     <script>
-        // YOUR EXACT GOOGLE WEB APP URL PRE-INTEGRATED:
+        // BACK-END GOOGLE PIPELINE (Stays exactly identical to protect your hard work!)
         const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzp8nkk2ehlQeypi0kaf5m38N-7OM4r4QtWdhvVPi8SJp1uLXf7j5aoPaesNboHbCgN/exec"; 
 
-        function onScanSuccess(decodedText, decodedResult) {
-            html5QrcodeScanner.clear();
-            document.getElementById('status-display').innerText = "Processing Check-In...";
-            document.getElementById('status-display').style.color = "#dd6b20"; // Golden amber
+        function processManualCheckIn() {
+            const clientName = document.getElementById('client-name').value.trim();
+            const staffMember = document.getElementById('staff-select').value;
+            const statusDisplay = document.getElementById('status-display');
+            const formContainer = document.getElementById('form-container');
 
-            fetch(`${GOOGLE_WEB_APP_URL}?id=${encodeURIComponent(decodedText)}`)
+            // Form validation
+            if (!clientName || !staffMember) {
+                statusDisplay.innerText = "⚠️ Please enter your name and select a practitioner.";
+                statusDisplay.style.color = "#dd6b20";
+                return;
+            }
+
+            // Hide form inputs during processing to look professional
+            formContainer.style.visibility = "hidden";
+            statusDisplay.innerText = "Processing Check-In...";
+            statusDisplay.style.color = "#dd6b20"; 
+
+            // Send manual details down our existing Google Web App URL pipeline
+            fetch(`${GOOGLE_WEB_APP_URL}?name=${encodeURIComponent(clientName)}&host=${encodeURIComponent(staffMember)}`)
                 .then(response => response.json())
                 .then(data => {
                     if(data.status === "success") {
-                        document.getElementById('status-display').innerText = `✔ Welcome, ${data.name}! Your host has been notified.`;
-                        document.getElementById('status-display').style.color = "#38a169"; // Success Green
+                        statusDisplay.innerHTML = `✔ Welcome, ${clientName}!<br><span style="font-size:16px; font-weight:normal; color:#4a5568;">We've let ${staffMember} know you are here. Please take a seat.</span>`;
+                        statusDisplay.style.color = "#38a169"; 
                     } else {
-                        document.getElementById('status-display').innerText = "❌ Code not recognized.";
-                        document.getElementById('status-display').style.color = "#e53e3e"; // Error Red
+                        statusDisplay.innerText = "❌ System Sync Error. Please tell your practitioner.";
+                        statusDisplay.style.color = "#e53e3e";
                     }
-                    setTimeout(startScanner, 4000);
+                    // Reset screen back to fresh layout after 7 seconds for the next client
+                    setTimeout(resetTerminal, 7000);
                 })
                 .catch(err => {
                     console.error(err);
-                    document.getElementById('status-display').innerText = "Network Error. Please see reception.";
-                    document.getElementById('status-display').style.color = "#e53e3e";
-                    setTimeout(startScanner
+                    statusDisplay.innerText = "Connection Error. Please let staff know.";
+                    statusDisplay.style.color = "#e53e3e";
+                    setTimeout(resetTerminal, 5000);
+                });
+        }
+
+        function resetTerminal() {
+            document.getElementById('client-name').value = "";
+            document.getElementById('staff-select').selectedIndex = 0;
+            document.getElementById('status-display').innerText = "";
+            document.getElementById('form-container').style.visibility = "visible";
+        }
+    </script>
+</body>
+</html>
