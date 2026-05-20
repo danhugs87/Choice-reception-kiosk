@@ -141,8 +141,24 @@
     </div>
 
     <script>
-        // BACK-END GOOGLE PIPELINE (Stays exactly identical to protect your hard work!)
-        const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwDp94ZGc6aaBL-P-P_oMbp2WzoacA80_kFdmy5QBYNIIp9hDD-sq_Zf42UtTexkDUP/exec"; 
+        // YOUR EXACT PRE-CONFIGURED GOOGLE WEB APP URL 
+        const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzp8nkk2ehlQeypi0kaf5m38N-7OM4r4QtWdhvVPi8SJp1uLXf7j5aoPaesNboHbCgN/exec"; 
+
+        // THIS HANDLES THE RECEPTION GREEN TICK RESPONSE ON SAFARI
+        function handleResponse(data) {
+            const statusDisplay = document.getElementById('status-display');
+            const clientName = document.getElementById('client-name').value.trim();
+            const staffMember = document.getElementById('staff-select').value;
+
+            if (data.status === "success") {
+                statusDisplay.innerHTML = `✔ Welcome, ${clientName}!<br><span style="font-size:16px; font-weight:normal; color:#4a5568;">We've let ${staffMember} know you are here. Please take a seat.</span>`;
+                statusDisplay.style.color = "#38a169"; 
+            } else {
+                statusDisplay.innerText = "❌ System Sync Error. Please tell your practitioner.";
+                statusDisplay.style.color = "#e53e3e";
+            }
+            setTimeout(resetTerminal, 7000);
+        }
 
         function processManualCheckIn() {
             const clientName = document.getElementById('client-name').value.trim();
@@ -150,41 +166,34 @@
             const statusDisplay = document.getElementById('status-display');
             const formContainer = document.getElementById('form-container');
 
-            // Form validation
             if (!clientName || !staffMember) {
                 statusDisplay.innerText = "⚠️ Please enter your name and select a practitioner.";
                 statusDisplay.style.color = "#dd6b20";
                 return;
             }
 
-            // Hide form inputs during processing to look professional
             formContainer.style.visibility = "hidden";
             statusDisplay.innerText = "Processing Check-In...";
             statusDisplay.style.color = "#dd6b20"; 
 
-            // Send manual details down our existing Google Web App URL pipeline
-            fetch(`${GOOGLE_WEB_APP_URL}?name=${encodeURIComponent(clientName)}&host=${encodeURIComponent(staffMember)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if(data.status === "success") {
-                        statusDisplay.innerHTML = `✔ Welcome, ${clientName}!<br><span style="font-size:16px; font-weight:normal; color:#4a5568;">We've let ${staffMember} know you are here. Please take a seat.</span>`;
-                        statusDisplay.style.color = "#38a169"; 
-                    } else {
-                        statusDisplay.innerText = "❌ System Sync Error. Please tell your practitioner.";
-                        statusDisplay.style.color = "#e53e3e";
-                    }
-                    // Reset screen back to fresh layout after 7 seconds for the next client
-                    setTimeout(resetTerminal, 7000);
-                })
-                .catch(err => {
-                    console.error(err);
-                    statusDisplay.innerText = "Connection Error. Please let staff know.";
-                    statusDisplay.style.color = "#e53e3e";
-                    setTimeout(resetTerminal, 5000);
-                });
+            // FORCED JSONP COMMUNICATION LINE (Safari Security Safe)
+            const finalUrl = `${GOOGLE_WEB_APP_URL}?name=${encodeURIComponent(clientName)}&host=${encodeURIComponent(staffMember)}&callback=handleResponse`;
+            
+            const script = document.createElement('script');
+            script.src = finalUrl;
+            script.onerror = function() {
+                statusDisplay.innerText = "Connection Error. Please see your practitioner.";
+                statusDisplay.style.color = "#e53e3e";
+                setTimeout(resetTerminal, 5000);
+            };
+            document.body.appendChild(script);
         }
 
         function resetTerminal() {
+            // Remove any leftover temporary script tags
+            const scripts = document.querySelectorAll('script[src^="https://script.google.com"]');
+            scripts.forEach(s => s.remove());
+
             document.getElementById('client-name').value = "";
             document.getElementById('staff-select').selectedIndex = 0;
             document.getElementById('status-display').innerText = "";
