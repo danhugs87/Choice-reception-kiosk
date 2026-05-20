@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choice Wellbeing Reception Terminal</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #111111;
+            color: #ffffff;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #terminal-card {
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+            background-color: #1a1a1a;
+            padding: 30px;
+            border-radius: 16px;
+            border: 2px solid #2c4a3e;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        h1 { font-size: 20px; color: #a3b899; text-transform: uppercase; margin-bottom: 5px; }
+        p { color: #718096; font-size: 14px; margin-bottom: 20px; }
+        #reader {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            border: none !important;
+            background-color: #2d3748;
+        }
+        #status-display {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #6b8e23;
+            min-height: 28px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="terminal-card">
+        <h1>Choice Wellbeing Service</h1>
+        <p>Hold your booking QR pass up to the camera to sign in</p>
+        
+        <div id="reader"></div>
+        
+        <div id="status-display">Ready to scan...</div>
+    </div>
+
+    <script>
+        // PASTE YOUR GOOGLE WEB APP URL FROM STEP 4 BETWEEN THE QUOTES BELOW:
+        const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzp8nkk2ehlQeypi0kaf5m38N-7OM4r4QtWdhvVPi8SJp1uLXf7j5aoPaesNboHbCgN/exec
+"; 
+
+        function onScanSuccess(decodedText, decodedResult) {
+            html5QrcodeScanner.clear();
+            document.getElementById('status-display').innerText = "Processing Check-In...";
+            document.getElementById('status-display').style.color = "#d69e2e";
+
+            fetch(`${GOOGLE_WEB_APP_URL}?id=${encodeURIComponent(decodedText)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if(data.status === "success") {
+                        document.getElementById('status-display').innerText = `✔ Welcome, ${data.name}! Your host has been notified.`;
+                        document.getElementById('status-display').style.color = "#48bb78";
+                    } else {
+                        document.getElementById('status-display').innerText = "❌ Code not recognized.";
+                        document.getElementById('status-display').style.color = "#e53e3e";
+                    }
+                    setTimeout(startScanner, 4000);
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('status-display').innerText = "System Network Error. Please notify staff.";
+                    setTimeout(startScanner, 4000);
+                });
+        }
+
+        function startScanner() {
+            document.getElementById('status-display').innerText = "Ready to scan...";
+            document.getElementById('status-display').style.color = "#6b8e23";
+            
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+                fps: 10, 
+                qrbox: {width: 250, height: 250},
+                rememberLastUsedCamera: true,
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+            });
+            html5QrcodeScanner.render(onScanSuccess);
+        }
+
+        let html5QrcodeScanner;
+        window.onload = startScanner;
+    </script>
+</body>
+</html>
