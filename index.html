@@ -8,8 +8,8 @@
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #111111;
-            color: #ffffff;
+            background-color: #ffffff; /* Stark white background */
+            color: #2d3748;
             margin: 0;
             display: flex;
             flex-direction: column;
@@ -22,85 +22,96 @@
             text-align: center;
             width: 90%;
             max-width: 500px;
-            background-color: #1a1a1a;
-            padding: 30px;
-            border-radius: 16px;
-            border: 2px solid #2c4a3e;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background-color: #ffffff;
+            padding: 20px;
         }
-        h1 { font-size: 20px; color: #a3b899; text-transform: uppercase; margin-bottom: 5px; }
-        p { color: #718096; font-size: 14px; margin-bottom: 20px; }
+        /* Logo Styles */
+        .logo-container {
+            margin-bottom: 20px;
+        }
+        .logo-container img {
+            max-width: 260px; /* Perfect sizing for the logo icon/text combination */
+            height: auto;
+        }
+        h1 { 
+            font-size: 26px; 
+            color: #1a202c; 
+            font-weight: 600; 
+            margin-bottom: 5px; 
+        }
+        p { 
+            color: #4a5568; 
+            font-size: 15px; 
+            margin-bottom: 30px; 
+            font-weight: 300; 
+        }
+        /* Camera Feed Container */
         #reader {
-            width: 100%;
-            border-radius: 12px;
+            width: 85%;
+            max-width: 340px;
+            margin: 0 auto;
+            border-radius: 20px;
             overflow: hidden;
-            border: none !important;
-            background-color: #2d3748;
+            border: 4px solid #e2e8f0 !important; /* Premium thick frame */
+            background-color: #edf2f7;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
+        /* Interactive Scanning Statuses */
         #status-display {
-            margin-top: 20px;
-            font-size: 18px;
+            margin-top: 30px;
+            font-size: 22px;
             font-weight: bold;
-            color: #6b8e23;
-            min-height: 28px;
+            color: #2f855a; /* Forest green for ready */
+            min-height: 32px;
+            letter-spacing: 0.5px;
+        }
+        .status-subtext {
+            font-size: 13px;
+            color: #718096;
+            margin-top: 4px;
         }
     </style>
 </head>
 <body>
 
     <div id="terminal-card">
-        <h1>Choice Wellbeing Service</h1>
-        <p>Hold your booking QR pass up to the camera to sign in</p>
+        <div class="logo-container">
+            <img src="https://raw.githubusercontent.com/danhugs87/Choice-reception-kiosk/main/2.png" alt="Choice Wellbeing Service" onerror="this.style.display='none'; document.getElementById('logo-text').style.display='block';">
+            <h2 id="logo-text" style="display:none; color:#2c4a3e; margin:0; font-size:28px;">CHOICE WELLBEING</h2>
+        </div>
+        
+        <h1>Welcome to Choice Wellbeing Service</h1>
+        <p>Hold your booking QR pass up to the camera frame below</p>
         
         <div id="reader"></div>
         
         <div id="status-display">Ready to scan...</div>
+        <div class="status-subtext">(Please align your QR code inside the frame)</div>
     </div>
 
     <script>
-        // PASTE YOUR GOOGLE WEB APP URL FROM STEP 4 BETWEEN THE QUOTES BELOW:
-        const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzp8nkk2ehlQeypi0kaf5m38N-7OM4r4QtWdhvVPi8SJp1uLXf7j5aoPaesNboHbCgN/exec
-"; 
+        // YOUR EXACT GOOGLE WEB APP URL PRE-INTEGRATED:
+        const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzp8nkk2ehlQeypi0kaf5m38N-7OM4r4QtWdhvVPi8SJp1uLXf7j5aoPaesNboHbCgN/exec"; 
 
         function onScanSuccess(decodedText, decodedResult) {
             html5QrcodeScanner.clear();
             document.getElementById('status-display').innerText = "Processing Check-In...";
-            document.getElementById('status-display').style.color = "#d69e2e";
+            document.getElementById('status-display').style.color = "#dd6b20"; // Golden amber
 
             fetch(`${GOOGLE_WEB_APP_URL}?id=${encodeURIComponent(decodedText)}`)
                 .then(response => response.json())
                 .then(data => {
                     if(data.status === "success") {
                         document.getElementById('status-display').innerText = `✔ Welcome, ${data.name}! Your host has been notified.`;
-                        document.getElementById('status-display').style.color = "#48bb78";
+                        document.getElementById('status-display').style.color = "#38a169"; // Success Green
                     } else {
                         document.getElementById('status-display').innerText = "❌ Code not recognized.";
-                        document.getElementById('status-display').style.color = "#e53e3e";
+                        document.getElementById('status-display').style.color = "#e53e3e"; // Error Red
                     }
                     setTimeout(startScanner, 4000);
                 })
                 .catch(err => {
                     console.error(err);
-                    document.getElementById('status-display').innerText = "System Network Error. Please notify staff.";
-                    setTimeout(startScanner, 4000);
-                });
-        }
-
-        function startScanner() {
-            document.getElementById('status-display').innerText = "Ready to scan...";
-            document.getElementById('status-display').style.color = "#6b8e23";
-            
-            html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-                fps: 10, 
-                qrbox: {width: 250, height: 250},
-                rememberLastUsedCamera: true,
-                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-            });
-            html5QrcodeScanner.render(onScanSuccess);
-        }
-
-        let html5QrcodeScanner;
-        window.onload = startScanner;
-    </script>
-</body>
-</html>
+                    document.getElementById('status-display').innerText = "Network Error. Please see reception.";
+                    document.getElementById('status-display').style.color = "#e53e3e";
+                    setTimeout(startScanner
