@@ -7,24 +7,24 @@
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #ffffff; /* Clean white backdrop */
+            background-color: #ffffff;
             color: #2d3748;
             margin: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            padding: 20px 0;
+            box-sizing: border-box;
         }
         #terminal-card {
             text-align: center;
-            width: 90%;
+            width: 95%;
             max-width: 500px;
             background-color: #ffffff;
             padding: 10px;
         }
-        /* Logo Styles */
         .logo-container {
             margin-bottom: 15px;
         }
@@ -44,9 +44,8 @@
             margin: 0 0 25px 0; 
             font-weight: 300; 
         }
-        /* Interactive Form Elements */
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
             text-align: left;
             width: 85%;
             margin-left: auto;
@@ -54,12 +53,18 @@
         }
         label {
             display: block;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             color: #718096;
             margin-bottom: 6px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+        }
+        .optional-tag {
+            font-size: 11px;
+            color: #a0aec0;
+            font-weight: normal;
+            text-transform: none;
         }
         input, select {
             width: 100%;
@@ -77,10 +82,9 @@
             border-color: #2f855a;
             background-color: #ffffff;
         }
-        /* Premium Tap Button */
         .submit-btn {
             width: 85%;
-            background-color: #2f855a; /* Choice brand accent green */
+            background-color: #2f855a; 
             color: #ffffff;
             border: none;
             padding: 16px;
@@ -95,7 +99,6 @@
         .submit-btn:active {
             transform: scale(0.98);
         }
-        /* Status feedback box */
         #status-display {
             margin-top: 25px;
             font-size: 20px;
@@ -123,6 +126,16 @@
             </div>
 
             <div class="input-group">
+                <label for="client-email">Email Address</label>
+                <input type="email" id="client-email" placeholder="e.g. jane@example.com" autocomplete="off">
+            </div>
+
+            <div class="input-group">
+                <label for="car-reg">Car Registration <span class="optional-tag">(Leave blank if you arrived by bus/walk)</span></label>
+                <input type="text" id="car-reg" placeholder="e.g. AB12 CDE" style="text-transform: uppercase;" autocomplete="off">
+            </div>
+
+            <div class="input-group">
                 <label for="staff-select">Who are you here to see?</label>
                 <select id="staff-select">
                     <option value="" disabled selected>Select a practitioner...</option>
@@ -141,10 +154,9 @@
     </div>
 
     <script>
-        // YOUR EXACT PRE-CONFIGURED GOOGLE WEB APP URL 
-        const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzADn3oWUKHJ12oZmIkESo_6uKrZGBX5U86gCgmpDcjd0diGEONUM3epDo_2nHLSSpE/exec"; 
+        // PASTE YOUR LIVE WEB APP EXEC URL LINK HERE
+        const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzp8nkk2ehlQeypi0kaf5m38N-7OM4r4QtWdhvVPi8SJp1uLXf7j5aoPaesNboHbCgN/exec"; 
 
-        // THIS HANDLES THE RECEPTION GREEN TICK RESPONSE ON SAFARI
         function handleResponse(data) {
             const statusDisplay = document.getElementById('status-display');
             const clientName = document.getElementById('client-name').value.trim();
@@ -162,12 +174,16 @@
 
         function processManualCheckIn() {
             const clientName = document.getElementById('client-name').value.trim();
+            const clientEmail = document.getElementById('client-email').value.trim();
+            const carReg = document.getElementById('car-reg').value.trim();
             const staffMember = document.getElementById('staff-select').value;
+            
             const statusDisplay = document.getElementById('status-display');
             const formContainer = document.getElementById('form-container');
 
-            if (!clientName || !staffMember) {
-                statusDisplay.innerText = "⚠️ Please enter your name and select a practitioner.";
+            // Form validation (Name, Email, and Staff are mandatory. Car Reg can skip!)
+            if (!clientName || !clientEmail || !staffMember) {
+                statusDisplay.innerText = "⚠️ Please enter your Name, Email, and pick a Practitioner.";
                 statusDisplay.style.color = "#dd6b20";
                 return;
             }
@@ -176,8 +192,8 @@
             statusDisplay.innerText = "Processing Check-In...";
             statusDisplay.style.color = "#dd6b20"; 
 
-            // FORCED JSONP COMMUNICATION LINE (Safari Security Safe)
-            const finalUrl = `${GOOGLE_WEB_APP_URL}?name=${encodeURIComponent(clientName)}&host=${encodeURIComponent(staffMember)}&callback=handleResponse`;
+            // Pack up everything to pass securely down our script line
+            const finalUrl = `${GOOGLE_WEB_APP_URL}?name=${encodeURIComponent(clientName)}&email=${encodeURIComponent(clientEmail)}&carReg=${encodeURIComponent(carReg)}&host=${encodeURIComponent(staffMember)}&callback=handleResponse`;
             
             const script = document.createElement('script');
             script.src = finalUrl;
@@ -190,11 +206,12 @@
         }
 
         function resetTerminal() {
-            // Remove any leftover temporary script tags
             const scripts = document.querySelectorAll('script[src^="https://script.google.com"]');
             scripts.forEach(s => s.remove());
 
             document.getElementById('client-name').value = "";
+            document.getElementById('client-email').value = "";
+            document.getElementById('car-reg').value = "";
             document.getElementById('staff-select').selectedIndex = 0;
             document.getElementById('status-display').innerText = "";
             document.getElementById('form-container').style.visibility = "visible";
