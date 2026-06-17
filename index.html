@@ -25,25 +25,42 @@
             background-color: #ffffff;
             padding: 10px;
         }
-        .logo-container {
-            margin-bottom: 15px;
+        .logo-container { margin-bottom: 15px; }
+        .logo-container img { max-width: 240px; height: auto; }
+        h1 { font-size: 26px; color: #1a202c; font-weight: 600; margin: 0 0 8px 0; }
+        p { color: #4a5568; font-size: 16px; margin: 0 0 25px 0; font-weight: 300; }
+        
+        /* Premium Tab Toggle Design - Blends seamlessly into original theme */
+        .tab-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e2e8f0;
+            width: 85%;
+            margin-left: auto;
+            margin-right: auto;
         }
-        .logo-container img {
-            max-width: 240px; 
-            height: auto;
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            background: none;
+            border: none;
+            color: #a0aec0;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s ease;
         }
-        h1 { 
-            font-size: 26px; 
-            color: #1a202c; 
-            font-weight: 600; 
-            margin: 0 0 8px 0; 
+        .tab-btn.active {
+            color: #2f855a;
+            border-bottom: 4px solid #2f855a;
         }
-        p { 
-            color: #4a5568; 
-            font-size: 16px; 
-            margin: 0 0 25px 0; 
-            font-weight: 300; 
-        }
+
+        /* Viewpanes */
+        .form-pane { display: none; }
+        .form-pane.active { display: block; }
+        
         .input-group {
             margin-bottom: 18px;
             text-align: left;
@@ -60,12 +77,7 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .optional-tag {
-            font-size: 11px;
-            color: #a0aec0;
-            font-weight: normal;
-            text-transform: none;
-        }
+        .optional-tag { font-size: 11px; color: #a0aec0; text-transform: none; font-weight: normal; }
         input, select {
             width: 100%;
             padding: 14px;
@@ -78,10 +90,8 @@
             outline: none;
             transition: all 0.2s ease;
         }
-        input:focus, select:focus {
-            border-color: #2f855a;
-            background-color: #ffffff;
-        }
+        input:focus, select:focus { border-color: #2f855a; background-color: #ffffff; }
+        
         .submit-btn {
             width: 85%;
             background-color: #2f855a; 
@@ -96,9 +106,44 @@
             transition: all 0.2s ease;
             margin-top: 10px;
         }
-        .submit-btn:active {
-            transform: scale(0.98);
+        .submit-btn:active { transform: scale(0.98); }
+        
+        /* 1-Click Sign-Out Layout Grid */
+        .signout-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 85%;
+            margin: 15px auto;
+            max-height: 280px;
+            overflow-y: auto;
+            padding-right: 5px;
         }
+        .name-tap-button {
+            width: 100%;
+            background-color: #f7fafc;
+            color: #2d3748;
+            border: 2px solid #e2e8f0;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 12px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .name-tap-button:active {
+            background-color: #edf2f7;
+            border-color: #2f855a;
+            transform: scale(0.99);
+        }
+        .no-visitors {
+            color: #718096;
+            font-style: italic;
+            padding: 20px;
+            font-size: 15px;
+        }
+        
         #status-display {
             margin-top: 25px;
             font-size: 20px;
@@ -117,24 +162,26 @@
         </div>
         
         <h1>Welcome to Choice Wellbeing Service</h1>
-        <p>Please check in for your appointment below</p>
+        <p>Please check in or out for your appointment below</p>
         
-        <div id="form-container">
+        <div class="tab-container">
+            <button class="tab-btn active" onclick="switchTab('signin')">Sign In</button>
+            <button class="tab-btn" onclick="switchTab('signout')">Sign Out</button>
+        </div>
+        
+        <div id="signin-pane" class="form-pane active">
             <div class="input-group">
                 <label for="client-name">Your Full Name</label>
                 <input type="text" id="client-name" placeholder="e.g. Jane Smith" autocomplete="off">
             </div>
-
             <div class="input-group">
                 <label for="client-email">Email Address</label>
                 <input type="email" id="client-email" placeholder="e.g. jane@example.com" autocomplete="off">
             </div>
-
             <div class="input-group">
                 <label for="car-reg">Car Registration <span class="optional-tag">(Leave blank if you arrived by bus/walk)</span></label>
                 <input type="text" id="car-reg" placeholder="e.g. AB12 CDE" style="text-transform: uppercase;" autocomplete="off">
             </div>
-
             <div class="input-group">
                 <label for="staff-select">Who are you here to see?</label>
                 <select id="staff-select">
@@ -146,75 +193,134 @@
                     <option value="Dan">Dan</option>
                 </select>
             </div>
-
-            <button class="submit-btn" onclick="processManualCheckIn()">Tap to Sign In</button>
+            <button class="submit-btn" onclick="processSignIn()">Tap to Sign In</button>
+        </div>
+        
+        <div id="signout-pane" class="form-pane">
+            <p style="font-size: 14px; color: #718096; margin-bottom: 10px;">Tap your name to check out securely:</p>
+            <div id="visitor-buttons-container" class="signout-grid">
+                </div>
         </div>
         
         <div id="status-display"></div>
     </div>
 
     <script>
-        // PASTE YOUR LIVE WEB APP EXEC URL LINK HERE
+        // PRESERVED ORIGINAL SCRIPT LINK 
         const GOOGLE_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwOWtAVh3BZa1FXDtAqj1u2AxO3OoHlitEd-EoozodamzBX8z_epaVLrVgmNdanM6P1/exec"; 
 
-        function handleResponse(data) {
-            const statusDisplay = document.getElementById('status-display');
-            const clientName = document.getElementById('client-name').value.trim();
-            const staffMember = document.getElementById('staff-select').value;
-
-            if (data.status === "success") {
-                statusDisplay.innerHTML = `✔ Welcome, ${clientName}!<br><span style="font-size:16px; font-weight:normal; color:#4a5568;">We've let ${staffMember} know you are here. Please take a seat.</span>`;
-                statusDisplay.style.color = "#38a169"; 
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.form-pane').forEach(p => p.classList.remove('active'));
+            document.getElementById('status-display').innerText = "";
+            
+            if (tabName === 'signin') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('signin-pane').classList.add('active');
             } else {
-                statusDisplay.innerText = "❌ System Sync Error. Please tell your practitioner.";
-                statusDisplay.style.color = "#e53e3e";
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('signout-pane').classList.add('active');
+                fetchPresentVisitors();
             }
-            setTimeout(resetTerminal, 7000);
         }
 
-        function processManualCheckIn() {
-            const clientName = document.getElementById('client-name').value.trim();
-            const clientEmail = document.getElementById('client-email').value.trim();
-            const carReg = document.getElementById('car-reg').value.trim();
-            const staffMember = document.getElementById('staff-select').value;
-            
-            const statusDisplay = document.getElementById('status-display');
-            const formContainer = document.getElementById('form-container');
+        // ASKS GOOGLE FOR A LIST OF ACTIVE GUESTS
+        function fetchPresentVisitors() {
+            const container = document.getElementById('visitor-buttons-container');
+            container.innerHTML = "<div class='no-visitors'>Loading active directory...</div>";
+            sendJsonpRequest(`${GOOGLE_WEB_APP_URL}?action=getPresent&callback=renderVisitorButtons`);
+        }
 
-            // Form validation (Name, Email, and Staff are mandatory. Car Reg can skip!)
-            if (!clientName || !clientEmail || !staffMember) {
+        // CONVERTS NAMES INTO ONE-TAP BUTTONS
+        function renderVisitorButtons(data) {
+            const container = document.getElementById('visitor-buttons-container');
+            container.innerHTML = "";
+            
+            if (data.status === "success" && data.clients && data.clients.length > 0) {
+                data.clients.forEach(name => {
+                    const btn = document.createElement('button');
+                    btn.className = 'name-tap-button';
+                    btn.innerHTML = `👋 ${name}`;
+                    btn.onclick = () => processSignOut(name);
+                    container.appendChild(btn);
+                });
+            } else {
+                container.innerHTML = "<div class='no-visitors'>No clients are currently signed in.</div>";
+            }
+        }
+
+        function processSignIn() {
+            const name = document.getElementById('client-name').value.trim();
+            const email = document.getElementById('client-email').value.trim();
+            const carReg = document.getElementById('car-reg').value.trim();
+            const host = document.getElementById('staff-select').value;
+            const statusDisplay = document.getElementById('status-display');
+
+            if (!name || !email || !host) {
                 statusDisplay.innerText = "⚠️ Please enter your Name, Email, and pick a Practitioner.";
                 statusDisplay.style.color = "#dd6b20";
                 return;
             }
 
-            formContainer.style.visibility = "hidden";
+            document.getElementById('signin-pane').style.visibility = "hidden";
             statusDisplay.innerText = "Processing Check-In...";
-            statusDisplay.style.color = "#dd6b20"; 
+            statusDisplay.style.color = "#dd6b20";
 
-            // Pack up everything to pass securely down our script line
-            const finalUrl = `${GOOGLE_WEB_APP_URL}?name=${encodeURIComponent(clientName)}&email=${encodeURIComponent(clientEmail)}&carReg=${encodeURIComponent(carReg)}&host=${encodeURIComponent(staffMember)}&callback=handleResponse`;
-            
-            const script = document.createElement('script');
-            script.src = finalUrl;
-            script.onerror = function() {
-                statusDisplay.innerText = "Connection Error. Please see your practitioner.";
+            const url = `${GOOGLE_WEB_APP_URL}?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&carReg=${encodeURIComponent(carReg)}&host=${encodeURIComponent(host)}&status=PRESENT&callback=handleGlobalResponse`;
+            sendJsonpRequest(url);
+        }
+
+        function processSignOut(targetName) {
+            const statusDisplay = document.getElementById('status-display');
+            document.getElementById('signout-pane').style.visibility = "hidden";
+            statusDisplay.innerText = "Processing Check-Out...";
+            statusDisplay.style.color = "#dd6b20";
+
+            const url = `${GOOGLE_WEB_APP_URL}?name=${encodeURIComponent(targetName)}&status=DEPARTED&callback=handleGlobalResponse`;
+            sendJsonpRequest(url);
+        }
+
+        function handleGlobalResponse(data) {
+            const statusDisplay = document.getElementById('status-display');
+            if (data.status === "success") {
+                statusDisplay.innerHTML = `✔ Action Completed Successfully!<br><span style="font-size:16px; font-weight:normal; color:#4a5568;">Thank you, the ledger has been updated.</span>`;
+                statusDisplay.style.color = "#38a169";
+            } else {
+                statusDisplay.innerText = "❌ System Sync Error. Please tell your practitioner.";
                 statusDisplay.style.color = "#e53e3e";
-                setTimeout(resetTerminal, 5000);
+            }
+            setTimeout(resetTerminalSystem, 6000);
+        }
+
+        function sendJsonpRequest(url) {
+            const oldScript = document.getElementById('jsonp-agent');
+            if (oldScript) oldScript.remove();
+
+            const script = document.createElement('script');
+            script.id = 'jsonp-agent';
+            script.src = url;
+            script.onerror = function() {
+                document.getElementById('status-display').innerText = "Connection Error. Please see your practitioner.";
+                document.getElementById('status-display').style.color = "#e53e3e";
+                setTimeout(resetTerminalSystem, 5000);
             };
             document.body.appendChild(script);
         }
 
-        function resetTerminal() {
-            const scripts = document.querySelectorAll('script[src^="https://script.google.com"]');
-            scripts.forEach(s => s.remove());
+        function resetTerminalSystem() {
+            const agent = document.getElementById('jsonp-agent');
+            if (agent) agent.remove();
 
             document.getElementById('client-name').value = "";
             document.getElementById('client-email').value = "";
             document.getElementById('car-reg').value = "";
             document.getElementById('staff-select').selectedIndex = 0;
             document.getElementById('status-display').innerText = "";
-            document.getElementById('form-container').style.visibility = "visible";
+            
+            document.getElementById('signin-pane').style.visibility = "visible";
+            document.getElementById('signout-pane').style.visibility = "visible";
+            
+            switchTab('signin');
         }
     </script>
 </body>
