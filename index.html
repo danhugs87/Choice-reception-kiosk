@@ -30,7 +30,6 @@
         h1 { font-size: 26px; color: #1a202c; font-weight: 600; margin: 0 0 8px 0; }
         p { color: #4a5568; font-size: 16px; margin: 0 0 25px 0; font-weight: 300; }
         
-        /* Premium Tab Toggle Design - Blends seamlessly into original theme */
         .tab-container {
             display: flex;
             justify-content: center;
@@ -57,7 +56,6 @@
             border-bottom: 4px solid #2f855a;
         }
 
-        /* Viewpanes */
         .form-pane { display: none; }
         .form-pane.active { display: block; }
         
@@ -108,7 +106,6 @@
         }
         .submit-btn:active { transform: scale(0.98); }
         
-        /* 1-Click Sign-Out Layout Grid */
         .signout-grid {
             display: flex;
             flex-direction: column;
@@ -224,14 +221,12 @@
             }
         }
 
-        // ASKS GOOGLE FOR A LIST OF ACTIVE GUESTS
         function fetchPresentVisitors() {
             const container = document.getElementById('visitor-buttons-container');
             container.innerHTML = "<div class='no-visitors'>Loading active directory...</div>";
             sendJsonpRequest(`${GOOGLE_WEB_APP_URL}?action=getPresent&callback=renderVisitorButtons`);
         }
 
-        // CONVERTS NAMES INTO ONE-TAP BUTTONS
         function renderVisitorButtons(data) {
             const container = document.getElementById('visitor-buttons-container');
             container.innerHTML = "";
@@ -266,7 +261,8 @@
             statusDisplay.innerText = "Processing Check-In...";
             statusDisplay.style.color = "#dd6b20";
 
-            const url = `${GOOGLE_WEB_APP_URL}?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&carReg=${encodeURIComponent(carReg)}&host=${encodeURIComponent(host)}&status=PRESENT&callback=handleGlobalResponse`;
+            // FORCED TO TRANSMIT "SIGNED IN" TO PERFECTLY MATCH THE GOOGLE MATRIX FALLBACK
+            const url = `${GOOGLE_WEB_APP_URL}?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&carReg=${encodeURIComponent(carReg)}&host=${encodeURIComponent(host)}&status=SIGNED IN&callback=handleGlobalResponse`;
             sendJsonpRequest(url);
         }
 
@@ -300,6 +296,7 @@
             script.id = 'jsonp-agent';
             script.src = url;
             script.onerror = function() {
+                document.getElementById('status-mock');
                 document.getElementById('status-display').innerText = "Connection Error. Please see your practitioner.";
                 document.getElementById('status-display').style.color = "#e53e3e";
                 setTimeout(resetTerminalSystem, 5000);
