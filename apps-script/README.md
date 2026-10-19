@@ -28,7 +28,7 @@ The key is remembered using browser local storage when available. Browser restri
 - Unclosed older visits remain in the sheet for later staff review; this version does not claim an exact current headcount.
 - Inactive forms clear after 90 seconds. Unconfirmed mutations retain their reference for retry while clearing visible identity fields.
 
-Practitioner email alerts are available after setupArrivalAlerts is enabled. A protected manager view, corrections, configurable activity administration and staff timekeeping remain future stages. Do not use this test build as the sole emergency attendance register.
+Practitioner email alerts are available after setupArrivalAlerts is enabled. Spreadsheet-based staff corrections are available after setupStaffTools. A separate manager web view, configurable activity administration and staff timekeeping remain future stages. Do not use this test build as the sole emergency attendance register.
 
 ## Test before moving the reception iPad
 
@@ -88,3 +88,19 @@ Saved-request retries never resend alerts. A failure or process interruption bet
 Set the ARRIVAL_ALERTS_ENABLED Script property to false to disable new email alerts without disabling visitor sign-in.
 
 Run node apps-script/check-alerts.cjs for mocked mail/backend integration checks. No real emails are sent by the test suite.
+
+## Staff correction of forgotten sign-outs
+
+Add StaffTools.gs as a separate Script file named StaffTools in the connected test Apps Script editor. Save and run setupStaffTools as the spreadsheet owner. It creates Visit_Corrections and adds a Reception menu to the spreadsheet. Refresh the Google Sheet if the menu does not appear. No web app deployment or private iPad link regeneration is required.
+
+In Visits, select any cell within ONE open visitor row, then Reception > Close selected visit. Enter the reason/evidence. Enter a confirmed actual departure as dd/MM/yyyy HH:mm in UK time, or leave blank if unknown. Check the confirmation before applying. Cancel if the person may still be inside.
+
+Known departures are marked Signed out - staff correction. Unknown times stay blank and the status becomes Closed by staff - time unknown. The correction log retains operator account, correction time, original/new status, departure values, reason and result. Unknown departures still count under No departure recorded in the weekly report; closing a visit does not establish its departure time.
+
+The owner is allowed by default. The owner may configure STAFF_MANAGER_EMAILS in Script properties as a comma-separated list of additional approved manager email addresses; each also needs access to edit the spreadsheet. This uses the existing restricted Google Sheet, not a separate tamper-proof role system: spreadsheet/script editors can edit underlying data and source. Public kiosk requests cannot invoke private helpers, and manager entry points verify a signed-in allowed editor and the connected spreadsheet.
+
+The record is re-found by stable visit ID after the dialogs and under the same lock as kiosk changes. If it has changed or already closed, the correction stops. A Pending audit entry is saved before any visit change. Applied confirms completion; Pending or Not confirmed requires checking both records before another correction.
+
+Live test: create one fictional community visit, then close it from the spreadsheet with reason Testing forgotten sign-out and unknown time. Check the departure stays blank, the status changes, and Visit_Corrections contains an Applied row with the correct account and separate correction timestamp.
+
+Run node apps-script/check-staff.cjs for mocked date, access, concurrency and write-failure checks. Verify the actual sheet menu and prompts manually.
