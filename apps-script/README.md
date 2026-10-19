@@ -104,3 +104,19 @@ The record is re-found by stable visit ID after the dialogs and under the same l
 Live test: create one fictional community visit, then close it from the spreadsheet with reason Testing forgotten sign-out and unknown time. Check the departure stays blank, the status changes, and Visit_Corrections contains an Applied row with the correct account and separate correction timestamp.
 
 Run node apps-script/check-staff.cjs for mocked date, access, concurrency and write-failure checks. Verify the actual sheet menu and prompts manually.
+
+## Transition from fictional tests to everyday attendance
+
+The owner confirmed that all entries in the connected test spreadsheet are fictional. Live preparation has been coded and locally checked but is not performed by changing GitHub.
+
+1. Replace Code.gs and Kiosk.html in Apps Script with the current versions. Add GoLive.gs as a Script file named GoLive. Save. Do not redeploy the web app yet.
+2. Stop using the kiosk during preparation. Run prepareLiveReception from the editor and return to the spreadsheet for its confirmation prompt. Type TEST ONLY only if every current record is fictional.
+3. The script copies Visits, Arrival_Alerts and Visit_Corrections to timestamped Archive_ tabs in the same spreadsheet. It verifies every copy before clearing any working data rows. Headers and formats remain. It resets the weekly selector to the current week, removes the known test footer, and renames the workbook Choice Reception - Attendance.
+4. Verify the three working logs contain headers only and Archive_ tabs retain the test data. The weekly total should be zero.
+5. Only after preparation succeeds, update the existing web-app deployment to a new version (execute as owner). Reopen the existing private iPad shortcut and verify the test banner is gone. Do not run createIpadLink or rotate any keys.
+
+Spreadsheet identity, device credentials and notification settings are preserved. Old original attendance files outside this connected test spreadsheet are untouched. Archive tabs remain visible for review.
+
+RECEPTION_LIVE_PREPARED_AT prevents accidental repeats. RECEPTION_GO_LIVE_CHECKPOINT tracks copies and clearing; if preparation stops, do not remove that property or rerun until the archive and working logs are reviewed. This protects subsequent real attendance from a repeated test-data reset.
+
+Run node apps-script/check-golive.cjs for archive-first ordering, copy verification failure, concurrent edit, partial clearing, cancellation, repeat and credential preservation checks. These use mocked Sheets and do not alter live records. The existing visitor, device, reports, email and correction checks also pass after the live-title changes.
