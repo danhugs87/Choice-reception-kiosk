@@ -82,6 +82,11 @@ function receptionRequest(request) {
     else if (request.action === "signOut") result = signOut_(sheet, rows, request, now);
     else result = {status: "error", message: "Unknown action. Please return to the welcome screen."};
     SpreadsheetApp.flush();
+    // Attendance is committed before attempting email. Retrying a saved visit
+    // does not send another notification.
+    if (request.action === "signIn" && result.status === "success" && !result.alreadySaved) {
+      result.notification = sendArrivalAlert_(ss, request, result.visitId, now);
+    }
     return result;
   } catch (error) {
     // Do not include request contents, keys or visitor details in logs or errors.
@@ -219,4 +224,122 @@ function isReceptionKey_(candidate, properties, managerKey) {
 function deviceTokenHash_(token) {
   return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, token, Utilities.Charset.UTF_8)
     .map(function(value) { return ("0" + ((value + 256) % 256).toString(16)).slice(-2); }).join("");
+}
+
+/** Confirmed practitioner addresses. No fallback recipient. */
+var RECEPTION_STAFF_EMAILS = {
+  Tara: "tara@choicewellbeingservice.org",
+  Louise: "louise@choicewellbeingservice.org",
+  Tracey: "tracey@choicewellbeingservice.org",
+  Hayley: "hayley@choicewellbeingservice.org",
+  Dan: "dan@choicewellbeingservice.org"
+};
+var ARRIVAL_ALERT_HEADERS = ["Visit ID", "Practitioner", "Email status", "Attempt time", "Detail"];
+
+/**
+ * Editor-only setup. Requests sending permission but does not send any email.
+ * Existing visits are never emailed retrospectively.
+ */
+function setupArrivalAlerts() {
+  ScriptApp.requireScopes(ScriptApp.AuthMode.FULL, [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/script.send_mail"
+  ]);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var email = Session.getActiveUser().getEmail();
+  var properties = PropertiesService.getScriptProperties();
+  if (!ss || !email || email !== Session.getEffectiveUser().getEmail() ||
+      ss.getId() !== properties.getProperty("RECEPTION_SPREADSHEET_ID")) {
+    throw new Error("Run setup from the connected test spreadsheet's Apps Script editor.");
+  }
+  validateHeaders_(ss.getSheetByName("Visits"));
+  var quota = MailApp.getRemainingDailyQuota();
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var sheet = ss.getSheetByName("Arrival_Alerts");
+    if (sheet && sheet.getLastRow() > 0) {
+      validateAlertHeaders_(sheet);
+    } else {
+      if (!sheet) sheet = ss.insertSheet("Arrival_Alerts");
+      sheet.getRange(1, 1, 1, ARRIVAL_ALERT_HEADERS.length).setValues([ARRIVAL_ALERT_HEADERS]);
+      sheet.getRange(1, 1, 1, ARRIVAL_ALERT_HEADERS.length)
+        .setBackground("#286247").setFontColor("#ffffff").setFontWeight("bold");
+      sheet.setFrozenRows(1);
+      sheet.getRange("D:D").setNumberFormat("dd/MM/yyyy HH:mm:ss");
+      sheet.setColumnWidth(1, 280);
+      sheet.setColumnWidth(2, 140);
+      sheet.setColumnWidth(3, 170);
+      sheet.setColumnWidth(4, 180);
+      sheet.setColumnWidth(5, 350);
+      sheet.getRange("E:E").setWrap(true);
+    }
+    SpreadsheetApp.flush();
+    properties.setProperty("ARRIVAL_ALERTS_ENABLED", "true");
+    console.log("Appointment alerts enabled. Remaining email-recipient allowance: " + quota + ".");
+    console.log("No email was sent by setup. Test one new fictional appointment with Dan.");
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function validateAlertHeaders_(sheet) {
+  if (!sheet || sheet.getLastColumn() !== ARRIVAL_ALERT_HEADERS.length ||
+      sheet.getRange(1, 1, 1, ARRIVAL_ALERT_HEADERS.length).getValues()[0].join("\t") !== ARRIVAL_ALERT_HEADERS.join("\t")) {
+    throw new Error("Arrival_Alerts layout does not match. No alert sent.");
+  }
+}
+
+/**
+ * Called under the attendance lock. Never throws to the visitor flow.
+ * Records an attempt before sending and never automatically resends.
+ */
+function sendArrivalAlert_(ss, request, visitId, arrivedAt) {
+  try {
+    if (request.visitType !== "Appointment") return "Not applicable";
+    if (PropertiesService.getScriptProperties().getProperty("ARRIVAL_ALERTS_ENABLED") !== "true") return "Disabled";
+    var host = request.destination;
+    var recipient = RECEPTION_STAFF_EMAILS[host];
+    if (!recipient) return "No configured recipient";
+    var sheet = ss.getSheetByName("Arrival_Alerts");
+    validateAlertHeaders_(sheet);
+    var entries = sheet.getDataRange().getValues();
+    for (var i = 1; i < entries.length; i++) {
+      if (entries[i][0] === visitId) return "Already attempted";
+    }
+    var attemptTime = new Date();
+    sheet.appendRow([visitId, host, "Sending", attemptTime, "Check manually if this status remains."]);
+    SpreadsheetApp.flush();
+    var row = sheet.getLastRow();
+    try {
+      if (MailApp.getRemainingDailyQuota() < 1) {
+        sheet.getRange(row, 3, 1, 3).setValues([["Not sent", attemptTime, "Daily email allowance exhausted."]]);
+        return "Not sent";
+      }
+      var arrival = Utilities.formatDate(arrivedAt, "Europe/London", "dd/MM/yyyy HH:mm");
+      var visitorName = cleanText_(request.name, 100);
+      MailApp.sendEmail({
+        to: recipient,
+        subject: "Choice reception: your appointment has arrived",
+        body: "Hi " + host + ",\n\n" + visitorName +
+          " has signed in at Choice reception.\n\nArrival: " + arrival +
+          " (UK time)\n\nChoice Wellbeing Service reception",
+        name: "Choice Reception"
+      });
+      // Submitted means accepted by Google's service, not confirmed inbox delivery.
+      sheet.getRange(row, 3, 1, 3).setValues([["Submitted", attemptTime, "Accepted by Google; inbox delivery is not confirmed."]]);
+      return "Submitted";
+    } catch (error) {
+      // A service interruption can leave delivery uncertain. Do not auto-resend.
+      try {
+        sheet.getRange(row, 3, 1, 3).setValues([["Not confirmed", attemptTime, "Check the practitioner's inbox. No automatic resend."]]);
+      } catch (ignored) {}
+      console.error("Arrival email could not be confirmed. Attendance remains saved.");
+      return "Not confirmed";
+    }
+  } catch (error) {
+    console.error("Arrival alert was unavailable. Attendance remains saved.");
+    return "Not confirmed";
+  }
 }
