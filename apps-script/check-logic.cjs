@@ -8,9 +8,10 @@ function node(id=''){return {id,hidden:true,value:'',textContent:'',children:[],
 for(const m of html.matchAll(/\bid="([^"]+)"/g))nodes[m[1]]=node(m[1]);
 const sections=[...html.matchAll(/<section id="([^"]+)"/g)].map(m=>nodes[m[1]]),stored=new Map(),calls=[],saved=new Map();
 let loseReply=false,closedId='';
+const testDeviceToken='ipad_'+ 'x'.repeat(40);
 const client={Date,console,Uint8Array,crypto:webcrypto,window:{crypto:webcrypto,scrollTo(){}},document:{getElementById:id=>nodes[id],querySelectorAll:s=>s==='fieldset > section'?sections:[],createElement:()=>node(),addEventListener(){}},localStorage:{getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)},setTimeout:()=>1,clearTimeout(){},setInterval(){},google:{script:{get run(){let good,bad;return {withSuccessHandler(fn){good=fn;return this;},withFailureHandler(fn){bad=fn;return this;},receptionRequest(p){
   calls.push(p);
-  if(p.key!=='test-key')return good({status:'error'});
+  if(p.key!=='test-key' && p.key!==testDeviceToken)return good({status:'error'});
   if(p.action==='config')return good({status:'success',hosts:['Tara','Dan'],activities:['Coffee morning','Dance class']});
   if(p.action==='signIn'){saved.set(p.requestId,p);if(loseReply){loseReply=false;return bad();}return good({status:'success'});}
   if(p.action==='findVisit')return good({status:'success',visits:p.name==='Nobody'?[]:[{visitId:'visit_reference_001',arrival:'10:00',visitType:'Community activity',destination:'Coffee morning'},{visitId:'visit_reference_002',arrival:'11:00',visitType:'Appointment',destination:'Tara'}]});
@@ -33,5 +34,11 @@ async function signIn(type,name,destination){run(`chooseType(${JSON.stringify(ty
   run('chooseType("Other visit")');assert(nodes.destination.disabled);assert(nodes['other-reason'].required);
   run('chooseType("Appointment")');assert(!nodes.destination.disabled);assert(nodes['other-reason'].disabled);
   assert(!html.includes('innerHTML'));assert(!html.includes('user-scalable=no'));
-  console.log('PASS: syntax, device pairing, all visit types, correct request fields, duplicate-name choices, exact visit checkout, no-match message, same-reference retry, form clearing, field switching and safe text rendering. Browser/layout and live Google checks remain.');
+  client.google.script.url={getLocation:callback=>callback({hash:'device='+testDeviceToken})};
+  for(let launch=0;launch<2;launch++){
+    const reopened={...client,localStorage:{getItem(){throw Error('Storage unavailable');},setItem(){throw Error('Storage unavailable');}}};
+    vm.createContext(reopened);vm.runInContext(script,reopened);await tick();
+    assert(visible('home'));assert.equal(calls.at(-1).key,testDeviceToken);
+  }
+  console.log('PASS: visitor flows, safe retry, cleared forms, and repeated private-link startup with browser storage disabled. Browser/layout and live Google checks remain.');
 })().catch(error=>{console.error(error);process.exit(1);});
