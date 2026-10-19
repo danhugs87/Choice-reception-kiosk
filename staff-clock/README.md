@@ -29,3 +29,17 @@ The visitor deployment, its private shortcut and all visitor logs are unchanged.
 Source branch: rebuild/staff-clock. Staff project code is in staff-clock; apps-script contains the separate visitor system source.
 
 Run node staff-clock/check-setup.cjs. Tests use mocked Google services, verify roles, paid-break policy, checkbox seeding, repeat setup, record/key preservation and guards. They do not create or edit any live spreadsheet. Confirm layout and account rows in the new Google Sheet after running setup.
+
+## Stage 2: private initial PINs
+
+Add Pins.gs as a Script file named Pins in the staff Apps Script project. Save and manually run setupStaffPins as the spreadsheet owner. It prints each newly generated six-digit initial PIN in the owner's execution log. Save these privately; do not paste the log into chat, GitHub or public messages. Give people only their own code. There is no email distribution action.
+
+Only missing PINs are generated. Rerunning setup preserves existing codes and will not reveal them again. To replace a lost/exposed code, run resetStaffPin from the editor, enter the staff ID in the spreadsheet prompt and save its private replacement code from the execution log. Reset invalidates the previous code and changes its version.
+
+PINs are not written to sheet cells. Script properties contain a distinct per-account salt and HMAC-SHA256 record with a private project pepper, an initial-PIN change requirement, and reset metadata. Actual initial codes are intentionally displayed only in the owner's generation/reset log. These are low-entropy personal PINs with rate limits, not strong identity proof. Keep script-editor access restricted; editors control the source, properties and records.
+
+The private verification helper validates current Staff roles and Enabled flags, returns no PIN/hash/pepper, and locks an account for five minutes after five incorrect attempts. A successful check clears failure state. Changing a PIN will invalidate future version-bound sessions when that layer is implemented.
+
+No public authentication, PIN-change screen, staff clocking API or management web interface is deployed by this stage. The next backend must enforce the initial-PIN change flag and account version before permitting clock actions. Do not collect real time records until the complete staff system has been tested.
+
+Run node staff-clock/check-pins.cjs for mocked HMAC/role/lockout/reset checks. It uses temporary fake credentials, prints no actual PINs and makes no live changes. Visitor reception is unchanged.
