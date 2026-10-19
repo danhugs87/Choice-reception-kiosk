@@ -52,7 +52,7 @@ function setupWeeklySummary() {
     activities.forEach(function(name, index) { put(activitiesHeader + index + 1, name); });
     put(noteRow, "No departure recorded includes forgotten sign-outs; it is not a current headcount.");
     put(noteRow + 1, "Change the highlighted date to view another week. Enter =TODAY() to return to the current week.");
-    put(noteRow + 2, "TEST REPORT: includes fictional visits recorded during setup.");
+    put(noteRow + 2, "");
     sheet.getRange(1, 1, lastRow, 2).setValues(values);
     sheet.getRange("B3").setFormula("=TODAY()");
     sheet.getRange("B4").setFormula('=IF(ISNUMBER(B3),INT(B3)-WEEKDAY(INT(B3),2)+1,"")');
