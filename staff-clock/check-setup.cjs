@@ -1,0 +1,18 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const source=fs.readFileSync(__dirname+'/Code.gs','utf8');new vm.Script(source);
+function make(options={}){
+  const tabs=new Map(),props=new Map(),logs=[];let writes=0,locked=false,uuid=0;
+  if(options.reception)props.set('RECEPTION_SPREADSHEET_ID','visitor-id');
+  function sheet(name,seed=[]){const rows=seed.map(r=>r.slice());const s={name,rows,getName:()=>name,getLastRow:()=>rows.length,getLastColumn:()=>rows[0]?.length||0,getRange(...args){const [r,c,n=1,m=1]=args;const range={getValues:()=>rows.slice(r-1,r-1+n).map(row=>row.slice(c-1,c-1+m)),setValues:values=>{writes++;values.forEach((row,i)=>{rows[r-1+i]??=[];row.forEach((v,j)=>{rows[r-1+i][c-1+j]=v;});});return range;},insertCheckboxes:()=>{for(let i=0;i<n;i++){rows[r-1+i]??=[];rows[r-1+i][c-1]=false;}return range;}};
+    ['setBackground','setFontColor','setFontWeight','setDataValidation','setNumberFormat','setWrap'].forEach(method=>range[method]=()=>range);return range;},setFrozenRows(){},setColumnWidths(){},setColumnWidth(){}};tabs.set(name,s);return s;}
+  if(options.badHeaders)sheet('Corrections',[['Wrong heading']]);
+  const ss={getName:()=>options.wrongName?'Choice Reception - Attendance':'Choice Staff Timekeeping - Test',getId:()=>'staff-id',getOwner:()=>({getEmail:()=>'owner@example.test'}),getSheetByName:name=>tabs.get(name),insertSheet:name=>{writes++;return sheet(name);},setSpreadsheetTimeZone:zone=>assert.equal(zone,'Europe/London')};
+  const context={console:{log:text=>logs.push(text)},ScriptApp:{AuthMode:{FULL:'full'},requireScopes(){}},SpreadsheetApp:{getActiveSpreadsheet:()=>ss,flush(){},newDataValidation:()=>({requireValueInList(){return this;},setAllowInvalid(){return this;},build(){return {};}})},PropertiesService:{getScriptProperties:()=>({getProperty:k=>props.get(k),setProperty:(k,v)=>props.set(k,v)})},Session:{getActiveUser:()=>({getEmail:()=>options.notOwner?'someone@example.test':'owner@example.test'})},LockService:{getScriptLock:()=>({waitLock(){assert(!locked);locked=true;},releaseLock(){locked=false;}})},Utilities:{getUuid:()=>String(++uuid).padStart(36,'x')}};
+  vm.createContext(context);vm.runInContext(source,context);return {context,tabs,props,logs,writes:()=>writes,locked:()=>locked};
+}
+let s=make();s.context.setupStaffClock();assert.equal(s.tabs.size,4);const people=s.tabs.get('Staff').rows.slice(1);assert.equal(people.length,5);
+assert.deepEqual(people.map(r=>[r[1],r[2]]),[['Dan','Management'],['Tracey','Management'],['Hayley','Management'],['Tara','Staff'],['Louise','Staff']]);assert(people.every(r=>r[4]===true));
+assert.equal(s.props.get('STAFF_BREAK_POLICY'),'PAID_NO_DEDUCTION');assert.equal(s.props.get('STAFF_SPREADSHEET_ID'),'staff-id');assert(s.props.get('STAFF_DEVICE_KEY'));assert(!s.logs.join('').includes(s.props.get('STAFF_DEVICE_KEY')));
+const key=s.props.get('STAFF_DEVICE_KEY');s.tabs.get('Staff').rows[1][4]=false;s.tabs.get('Shifts').rows.push(['Existing shift','dan']);s.context.setupStaffClock();assert.equal(s.tabs.get('Staff').rows[1][4],false);assert.equal(s.tabs.get('Shifts').rows.length,2);assert.equal(s.props.get('STAFF_DEVICE_KEY'),key);assert(!s.locked());
+for(const options of [{wrongName:true},{reception:true},{notOwner:true},{badHeaders:true}]){s=make(options);assert.throws(()=>s.context.setupStaffClock());assert.equal(s.writes(),0);assert(!s.locked());assert(!s.props.has('STAFF_DEVICE_KEY'));}
+console.log('PASS: five confirmed staff/roles, checkbox values, paid-break setting, preserved records and keys on repeat, no secret logging, and rejection of reception/wrong/unauthorised/incompatible spreadsheets. No live records modified.');
