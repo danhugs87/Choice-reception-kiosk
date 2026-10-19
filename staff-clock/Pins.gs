@@ -118,11 +118,11 @@ function scGenerateUniquePin_(accounts, properties, pepper) {
   throw new Error("Unable to generate a distinct code. Please try again.");
 }
 
-function scStorePin_(id, pin, actor, properties, pepper) {
+function scStorePin_(id, pin, actor, properties, pepper, requireChange) {
   var salt = Utilities.getUuid();
   properties.setProperty("STAFF_PIN_" + id, JSON.stringify({
     salt: salt, hash: scPinHash_(id, pin, salt, pepper),
-    version: Utilities.getUuid(), mustChange: true,
+    version: Utilities.getUuid(), mustChange: requireChange !== false,
     changedAt: new Date().toISOString(), changedBy: actor
   }));
   properties.deleteProperty("STAFF_PIN_ATTEMPTS_" + id);
@@ -197,3 +197,4 @@ function scVerifyPin_(id, pin) {
     if (lock && lock.hasLock()) lock.releaseLock();
   }
 }
+
