@@ -67,3 +67,27 @@ Operations is a durable intent journal, not an additional time ledger to sum. It
 No PINs or credentials are stored in clock operation rows. Formula-like descriptions are stored as literal text, and displayed using textContent. Hours and work notes are cleared from the screen when locked.
 
 Checks: node staff-clock/check-clock.cjs exercises the actual server functions with fake Sheets/crypto/services, including crashes between writes and same-reference retries. node staff-clock/check-ui.cjs checks screen logic with a DOM stand-in. node staff-clock/check-pins.cjs still passes after the PIN update. None use real credentials or live records. Actual Google calculation/UI rendering, phone/iPad behaviour and final live deployment require manual verification.
+
+## Stage 4: management correction of missed clock-outs
+
+In the staff Apps Script project:
+1. Replace Clock.gs and Staff.html with the current versions.
+2. Add a Script file named StaffCorrections and paste StaffCorrections.gs.
+3. Save, run setupStaffCorrections as the owner, then update the existing STAFF deployment to a new version (execute as owner).
+4. Existing personal PINs and records are preserved. Do not rerun PIN generation.
+
+Management users sign in with their own PIN, open Management weekly overview > Correct a missed clock-out, choose an open shift, enter a confirmed actual UK finish date/time and a reason explaining how it was confirmed, then confirm. Date format is dd/MM/yyyy HH:mm, optionally with :ss seconds. There is no current-time default. A finish before the latest location period or in the future is rejected. If the actual time is unknown, leave it open for review; no hours are invented.
+
+Dan, Tracey and Hayley are permitted based on the CURRENT Staff role after PIN authentication. Tara/Louise cannot access either correction endpoint, even if they change client-side role fields.
+
+A correction closes the final work period and its shift with status Closed - staff correction. Prior completed location periods are preserved. Corrections stores the original and intended shift/period snapshots, author staff ID, reason, actual finish and separate correction timestamp. Earlier clock Operations are preserved as historical events.
+
+The audit is Pending before time rows change, then Applied after both writes complete. Retrying the same correction reference verifies its original details. Already-authorised Pending corrections can resume on management-list loading or that staff member's next authenticated state read. This completes the original approved intent, not a new correction. A record changed since the original snapshot is refused for owner review; it is not overwritten.
+
+An unfinished staff clock operation must be recovered by that staff member before management can correct the shift. Pending operations are flagged in the open-shift picker.
+
+Live test: clock Dan in, note the actual finish after at least a minute, lock the page without clocking out, sign back in, use the management correction form and supply the confirmed finish and reason Testing missed clock-out. Check Shifts and the last Work_Segments row close at that supplied time, and Corrections has one Applied audit record retaining originals.
+
+This stage corrects OPEN shifts with known actual finish times. Corrections to existing closed shifts, missing clock-ins, and review/approval of timesheets remain separate future work if required.
+
+The check-clock integration suite now includes role denial, invalid/future/early finishes, original snapshots, partial write/marker failure recovery, pending-operation blocks and refusal to overwrite edited rows. The check-ui suite includes the correction form and same-reference retry. These use mocked services and a DOM stand-in; actual browser/Google deployment remains a live check.
