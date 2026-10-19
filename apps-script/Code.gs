@@ -10,8 +10,9 @@ var RECEPTION_ACTIVITIES = ["Dance class", "Craft group", "Coffee morning", "Oth
 
 function setupReception() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss || ss.getName() !== "Choice Reception - Test") {
-    throw new Error('Open Apps Script from "Choice Reception - Test".');
+  var configuredId = PropertiesService.getScriptProperties().getProperty("RECEPTION_SPREADSHEET_ID");
+  if (!ss || (configuredId ? ss.getId() !== configuredId : ss.getName() !== "Choice Reception - Test")) {
+    throw new Error("Open Apps Script from the connected reception spreadsheet.");
   }
   // Never allow an anonymous web visitor to run editor setup.
   var editor = Session.getActiveUser().getEmail();
@@ -47,7 +48,7 @@ function setupReception() {
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile("Kiosk")
-    .setTitle("Choice Reception Test")
+    .setTitle("Choice Reception")
     .addMetaTag("viewport", "width=device-width, initial-scale=1");
 }
 
