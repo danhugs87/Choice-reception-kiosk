@@ -198,7 +198,8 @@ function createIpadLink() {
     throw new Error("Run this from the test spreadsheet's Apps Script editor.");
   }
   if (!properties.getProperty("KIOSK_KEY")) throw new Error("Run setupReception first.");
-  var url = ScriptApp.getService().getUrl();
+  // Use the exact working test deployment; editor auto-discovery may return another address.
+  var url = "https://script.google.com/macros/s/AKfycbzKymNKF4ceK2eOGa2jBqEvy2-PugqK-mSJzBtY-sWsanRFBLdsEIE7G7GEcjEq4vMqqA/exec";
   if (!url || !/\/exec$/.test(url)) {
     throw new Error("Deploy the test web app first, then run this from the editor.");
   }
