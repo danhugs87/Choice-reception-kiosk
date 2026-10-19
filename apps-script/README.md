@@ -28,7 +28,7 @@ The key is remembered using browser local storage when available. Browser restri
 - Unclosed older visits remain in the sheet for later staff review; this version does not claim an exact current headcount.
 - Inactive forms clear after 90 seconds. Unconfirmed mutations retain their reference for retry while clearing visible identity fields.
 
-The current build does not send practitioner emails. Notifications, weekly summaries, a protected manager view, corrections, configurable activity administration and staff timekeeping remain future stages. Do not use this test build as the sole emergency attendance register.
+The current build does not send practitioner emails. Notifications, a protected manager view, corrections, configurable activity administration and staff timekeeping remain future stages. Do not use this test build as the sole emergency attendance register.
 
 ## Test before moving the reception iPad
 
@@ -58,3 +58,17 @@ The private URL contains a separate device credential, not KIOSK_KEY, and grants
 This bypasses reliance on browser storage; actual Home Screen fragment preservation still requires an iPad check. No tracking-protection changes are required. The private link is intentionally logged only when the owner manually runs createIpadLink; routine visitor requests never log it.
 
 Run node apps-script/check-device.cjs for token generation, revocation and guard checks. The UI flow checks also simulate repeated launches with localStorage unavailable.
+
+## Weekly attendance summary
+
+Add Reports.gs as a separate Script file named Reports in the existing test Apps Script project. Save and manually run setupWeeklySummary. No web-app redeployment or iPad shortcut changes are needed.
+
+This creates Weekly_Summary without changing Visits. If the tab already exists, setup leaves it unchanged. The report checks the editor identity, connected spreadsheet, Visits headers and Europe/London spreadsheet time zone before creating anything.
+
+B3 is the editable date selector, initially =TODAY(). Choose any date to show its Monday–Sunday week. Restore =TODAY() to follow the current week. Formula totals update as Visits receives new records.
+
+The report counts visits by arrival time, not unique people, appointments booked or completed appointments. An arrival on Sunday is included until, but not including, next Monday at midnight. A visit leaving the following week is counted in its arrival week. No departure recorded is based on the selected week's arrivals with a blank departure, so it is not a current building headcount.
+
+Check the initial total against the test rows in Visits, change B3 to a week with no records, restore the current week, and make one fictional sign-in to confirm the total increases by one. Its sign-out should keep total visits unchanged and reduce the no-departure count by one. Visually check the date selector, headings and counts in Google Sheets.
+
+Run node apps-script/check-reports.cjs for formula-fixture and setup-guard checks. These do not replace live Google Sheets calculation and visual verification.
