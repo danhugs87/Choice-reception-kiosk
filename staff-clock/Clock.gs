@@ -72,15 +72,20 @@ function staffClockRequest(request) {
       return {status: "success", mustChange: true, profile: profile};
     }
     scClockTables_(ss);
+    if (["managementOpenShifts", "closeMissedShift"].indexOf(request.action) !== -1) {
+      if (actor.role !== "Management") scFail_("Management access is required.");
+      return scStaffCorrectionRequest_(ss, actor, request);
+    }
     if (request.action === "managementWeek") {
       if (actor.role !== "Management") scFail_("Management access is required.");
       var week = scWeekBounds_(request.weekDate, new Date());
       return {status: "success", week: week.label, summary: scPinAccounts_(ss).map(function(a) {
         var data = scWeekReport_(ss, a.id, week);
         return {name: a.name, role: a.role, recordedHours: data.recordedHours,
-          ongoingHours: data.ongoingHours, pending: scPendingOperations_(ss, a.id).length > 0};
+          ongoingHours: data.ongoingHours, pending: scPendingOperations_(ss, a.id).length > 0 || (typeof scHasPendingStaffCorrection_ === "function" && scHasPendingStaffCorrection_(ss, a.id))};
       })};
     }
+    if (typeof scRecoverStaffCorrections_ === "function") scRecoverStaffCorrections_(ss, actor.id);
     scRecoverPending_(ss, actor.id);
     if (["clockIn", "clockOut", "changeLocation"].indexOf(request.action) !== -1) scClockAction_(ss, actor.id, request);
     else if (["login", "getState"].indexOf(request.action) === -1) scFail_("Action not recognised.");
@@ -233,3 +238,4 @@ function scCleanClockText_(value, limit) {
 }
 function scClockCellText_(value) { return /^[=+\-@']/.test(value) ? "'" + value : value; }
 function scDisplayText_(value) { var text = String(value || ""); return /^'[=+\-@']/.test(text) ? text.slice(1) : text; }
+
