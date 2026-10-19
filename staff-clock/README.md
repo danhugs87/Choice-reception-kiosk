@@ -40,6 +40,30 @@ PINs are not written to sheet cells. Script properties contain a distinct per-ac
 
 The private verification helper validates current Staff roles and Enabled flags, returns no PIN/hash/pepper, and locks an account for five minutes after five incorrect attempts. A successful check clears failure state. Changing a PIN will invalidate future version-bound sessions when that layer is implemented.
 
-No public authentication, PIN-change screen, staff clocking API or management web interface is deployed by this stage. The next backend must enforce the initial-PIN change flag and account version before permitting clock actions. Do not collect real time records until the complete staff system has been tested.
+Stage 2 alone does not deploy a public interface. Stage 3 below adds the PIN-change screen, clocking API and role-checked management overview. Do not collect real time records until the complete staff system has been tested.
 
 Run node staff-clock/check-pins.cjs for mocked HMAC/role/lockout/reset checks. It uses temporary fake credentials, prints no actual PINs and makes no live changes. Visitor reception is unchanged.
+
+## Stage 3: staff clock test application
+
+Install in the STAFF Apps Script project only:
+1. Replace Pins.gs with the latest version. This updates a helper; it does not regenerate stored PINs.
+2. Add a Script file named Clock and paste Clock.gs.
+3. Add an HTML file named Staff and paste Staff.html.
+4. Save all files. Manually run setupStaffClockApp as the owner. It validates the data tabs and configured PINs and adds Operations. No email is sent, no working records or existing PINs are reset.
+5. Deploy this separate staff project as a NEW web app, execute as Me (the owner), access Anyone. It uses personal PINs for application access.
+6. Open its /exec URL. Choose Dan and use the saved initial code. Choose a new six-digit PIN, then sign in with that new PIN. Keep it private.
+7. Test clock-in at Choice, location change to Off-site work with a description, clock-out and the weekly views. Check one shift spans its location periods and no time is counted twice. Quick tests may round to 0.00 decimal hours; check the saved timestamps.
+8. Do not add this to the reception iPad yet. Visitor integration, staff time corrections and live staff deployment are later stages.
+
+The current app supports building, home and off-site work. No break deduction occurs. It uses Google server timestamps. A location change closes the old work period and starts the next at the same instant within the same shift. Closed periods contribute recorded hours; a still-open period is shown separately as ongoing hours. A long open shift is flagged for review without automatically fabricating an end time.
+
+The weekly view uses Europe/London Monday-to-Monday boundaries and splits elapsed time across weeks, including DST changes. Staff can request only their own time records. Management overview is checked against the CURRENT Staff role after verifying the PIN on every call; client-supplied roles are ignored. The public staff list includes active first names/IDs only.
+
+Initial PINs must be changed before clock actions. Their stored version, enabled flag and role are rechecked after the action lock is acquired. PIN resets therefore invalidate old credentials immediately. PINs are sent only over the Apps Script HTTPS RPC and held in browser memory while that staff screen is unlocked; no PIN/session is stored in localStorage or URL. The screen locks after 60 idle seconds and shortly after a successful clock action. Locking the screen does not clock someone out.
+
+Operations is a durable intent journal, not an additional time ledger to sum. It records a clock request before updating Shifts and Work_Segments. Repeated request IDs are checked against their original staff/action/location/description. Pending operations for an authenticated staff member are resumed before another clock action or state read, using the original timestamp and record IDs. Do not manually clear or edit Pending operations; ask for review if automatic recovery fails. An Applied operation is not duplicated after a lost response.
+
+No PINs or credentials are stored in clock operation rows. Formula-like descriptions are stored as literal text, and displayed using textContent. Hours and work notes are cleared from the screen when locked.
+
+Checks: node staff-clock/check-clock.cjs exercises the actual server functions with fake Sheets/crypto/services, including crashes between writes and same-reference retries. node staff-clock/check-ui.cjs checks screen logic with a DOM stand-in. node staff-clock/check-pins.cjs still passes after the PIN update. None use real credentials or live records. Actual Google calculation/UI rendering, phone/iPad behaviour and final live deployment require manual verification.
