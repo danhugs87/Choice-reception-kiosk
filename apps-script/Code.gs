@@ -61,7 +61,7 @@ function receptionRequest(request) {
   try {
     var properties = PropertiesService.getScriptProperties();
     var key = properties.getProperty("KIOSK_KEY");
-    if (!request || !key || request.key !== key) {
+    if (!request || !isReceptionKey_(request.key, properties, key)) {
       return {status: "error", message: "This device needs to be connected by a manager."};
     }
     if (request.action === "config") {
@@ -179,3 +179,43 @@ function displayText_(value) {
 function validId_(value) { return typeof value === "string" && /^[a-zA-Z0-9_-]{16,80}$/.test(value); }
 function londonDate_(date) { return Utilities.formatDate(date, "Europe/London", "yyyy-MM-dd"); }
 
+
+/**
+ * Editor-only: creates/replaces the private iPad shortcut.
+ * Copy its URL from your own execution log; do not share it publicly.
+ * Running again revokes the previous iPad shortcut, not the manager key.
+ */
+function createIpadLink() {
+  ScriptApp.requireScopes(ScriptApp.AuthMode.FULL, [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/userinfo.email"
+  ]);
+  var active = SpreadsheetApp.getActiveSpreadsheet();
+  var editor = Session.getActiveUser().getEmail();
+  var properties = PropertiesService.getScriptProperties();
+  if (!active || !editor || editor !== Session.getEffectiveUser().getEmail() ||
+      active.getId() !== properties.getProperty("RECEPTION_SPREADSHEET_ID")) {
+    throw new Error("Run this from the test spreadsheet's Apps Script editor.");
+  }
+  if (!properties.getProperty("KIOSK_KEY")) throw new Error("Run setupReception first.");
+  var url = ScriptApp.getService().getUrl();
+  if (!url || !/\/exec$/.test(url)) {
+    throw new Error("Deploy the test web app first, then run this from the editor.");
+  }
+  var token = Utilities.getUuid() + Utilities.getUuid();
+  properties.setProperty("IPAD_TOKEN_HASH", deviceTokenHash_(token));
+  console.log("PRIVATE IPAD LINK — keep this to yourself:");
+  console.log(url + "#device=" + encodeURIComponent(token));
+}
+
+function isReceptionKey_(candidate, properties, managerKey) {
+  if (typeof candidate !== "string" || !candidate || candidate.length > 200) return false;
+  if (managerKey && candidate === managerKey) return true;
+  var expected = properties.getProperty("IPAD_TOKEN_HASH");
+  return !!expected && deviceTokenHash_(candidate) === expected;
+}
+
+function deviceTokenHash_(token) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, token, Utilities.Charset.UTF_8)
+    .map(function(value) { return ("0" + ((value + 256) % 256).toString(16)).slice(-2); }).join("");
+}
