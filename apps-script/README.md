@@ -28,7 +28,7 @@ The key is remembered using browser local storage when available. Browser restri
 - Unclosed older visits remain in the sheet for later staff review; this version does not claim an exact current headcount.
 - Inactive forms clear after 90 seconds. Unconfirmed mutations retain their reference for retry while clearing visible identity fields.
 
-The current build does not send practitioner emails. Notifications, a protected manager view, corrections, configurable activity administration and staff timekeeping remain future stages. Do not use this test build as the sole emergency attendance register.
+Practitioner email alerts are available after setupArrivalAlerts is enabled. A protected manager view, corrections, configurable activity administration and staff timekeeping remain future stages. Do not use this test build as the sole emergency attendance register.
 
 ## Test before moving the reception iPad
 
@@ -72,3 +72,19 @@ The report counts visits by arrival time, not unique people, appointments booked
 Check the initial total against the test rows in Visits, change B3 to a week with no records, restore the current week, and make one fictional sign-in to confirm the total increases by one. Its sign-out should keep total visits unchanged and reduce the no-departure count by one. Visually check the date selector, headings and counts in Google Sheets.
 
 Run node apps-script/check-reports.cjs for formula-fixture and setup-guard checks. These do not replace live Google Sheets calculation and visual verification.
+
+## Appointment arrival email alerts
+
+Recipients are the five exact addresses from the original script, confirmed by the owner: tara, louise, tracey, hayley and dan at choicewellbeingservice.org. There is no fallback or community-activity recipient.
+
+Install the latest Code.gs and appsscript.json in the existing test Apps Script project. Save both. Manually run setupArrivalAlerts and grant spreadsheet, identity and send-email permissions. Setup only checks quota and creates the Arrival_Alerts audit tab; it sends no mail. Then update the existing web-app deployment to a new version, executing as the owner. The existing iPad shortcut remains valid. Do not run createIpadLink as part of this update.
+
+For the live test, sign in one fictional Appointment with Dan, then check dan@choicewellbeingservice.org including junk mail and Arrival_Alerts. Subject: Choice reception: your appointment has arrived. The body contains the visitor's name and UK arrival timestamp; no registration or visitor email is included. Check one community visit creates no email attempt.
+
+Attendance is saved and flushed before attempting an alert. Attempts are recorded before sending. Successful service calls are labelled Submitted, which does not prove inbox delivery. Quota exhaustion is Not sent; interrupted sending is Not confirmed, requiring an inbox check. A retained Sending state also requires a manual check. Do not automatically resend an uncertain email.
+
+Saved-request retries never resend alerts. A failure or process interruption between attendance saving and the mail attempt can result in a missed notification. Alerts are best-effort; the attendance log is the authoritative visit record. Existing visits are not emailed retrospectively.
+
+Set the ARRIVAL_ALERTS_ENABLED Script property to false to disable new email alerts without disabling visitor sign-in.
+
+Run node apps-script/check-alerts.cjs for mocked mail/backend integration checks. No real emails are sent by the test suite.
