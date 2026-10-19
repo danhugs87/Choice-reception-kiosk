@@ -42,3 +42,19 @@ Use fictional records only:
 - Leave a form idle and check personal fields clear.
 
 Run node apps-script/check-logic.cjs after checking out this branch. These are DOM-stand-in flow tests with mocked RPC responses, not browser rendering or live Google integration tests. Backend logic was separately checked with mocked Apps Script services. The attempted local browser test was unavailable because its browser runtime could not be downloaded.
+
+## iPad Home Screen fallback when local storage does not persist
+
+Keep the existing deployed appearance while design work is deferred.
+
+1. Replace Code.gs and Kiosk.html in the test Apps Script editor with the latest files in this branch, then save.
+2. Update the existing test deployment to a new version (execute as owner).
+3. From the editor, run createIpadLink. It prints an intentionally private URL in your execution log. Do not paste that log/link into chat, GitHub or public messages.
+4. Transfer the private link to your iPad yourself, open it in Safari, then add that exact URL to the Home Screen. Ensure the saved URL retains its #device= fragment. Replace the old shortcut.
+5. Close and reopen twice from the new icon and check that it connects without requesting the manager key. Then test one fictional arrival/departure.
+
+The private URL contains a separate device credential, not KIOSK_KEY, and grants the same kiosk operations as the paired visitor device. It is intentionally available to anyone with physical access to that bookmark. Keep the device and link controlled. Its fragment is read using google.script.url.getLocation. The backend stores only the device-token hash. Generating a new link invalidates the previous device link; the existing manager key remains valid. It does not revoke earlier manager-key pairings.
+
+This bypasses reliance on browser storage; actual Home Screen fragment preservation still requires an iPad check. No tracking-protection changes are required. The private link is intentionally logged only when the owner manually runs createIpadLink; routine visitor requests never log it.
+
+Run node apps-script/check-device.cjs for token generation, revocation and guard checks. The UI flow checks also simulate repeated launches with localStorage unavailable.
