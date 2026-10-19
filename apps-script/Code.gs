@@ -46,12 +46,9 @@ function setupReception() {
 }
 
 function doGet() {
-  // Stage 2 connection check. The kiosk interface is added in the next step.
-  return HtmlService.createHtmlOutput(
-    '<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>' +
-    '<body style="font:20px Arial;padding:32px"><h1>Choice Reception Test</h1>' +
-    '<p>The test connection is ready. The sign-in screen will be added next.</p></body></html>'
-  ).setTitle("Choice Reception Test");
+  return HtmlService.createHtmlOutputFromFile("Kiosk")
+    .setTitle("Choice Reception Test")
+    .addMetaTag("viewport", "width=device-width, initial-scale=1");
 }
 
 /**
@@ -181,3 +178,4 @@ function displayText_(value) {
 }
 function validId_(value) { return typeof value === "string" && /^[a-zA-Z0-9_-]{16,80}$/.test(value); }
 function londonDate_(date) { return Utilities.formatDate(date, "Europe/London", "yyyy-MM-dd"); }
+
