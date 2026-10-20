@@ -1,4 +1,4 @@
-# Choice staff timekeeping — separate project, stage 1
+# Choice staff timekeeping
 
 Confirmed scope:
 - Management: Dan, Tracey, Hayley.
@@ -8,7 +8,7 @@ Confirmed scope:
 - Changing location should continue the same working day without counting time twice.
 - Staff use individual PINs, see their own time records; management will have broader reports and audited corrections.
 
-Stage 1 only creates the data structure. No PIN login, clocking interface, totals or management API is active yet. Later stages must implement and verify those behaviours before any real staff time is recorded.
+Current implementation includes PIN login, paid-hours reporting, work locations, management correction of missed clock-outs and reception navigation. The owner has verified the visitor/staff links and locked-screen privacy on the iPad under Apple Guided Access. The install stages below document the original build sequence. Staff records are currently fictional tests; the one-time live preparation below archives them before genuine use.
 
 ## Install stage 1
 
@@ -91,3 +91,27 @@ Live test: clock Dan in, note the actual finish after at least a minute, lock th
 This stage corrects OPEN shifts with known actual finish times. Corrections to existing closed shifts, missing clock-ins, and review/approval of timesheets remain separate future work if required.
 
 The check-clock integration suite now includes role denial, invalid/future/early finishes, original snapshots, partial write/marker failure recovery, pending-operation blocks and refusal to overwrite edited rows. The check-ui suite includes the correction form and same-reference retry. These use mocked services and a DOM stand-in; actual browser/Google deployment remains a live check.
+
+## Reception iPad navigation
+
+Use the existing private reception Home Screen bookmark. Staff clock in / out opens this separate staff deployment; Return to visitor reception clears the in-memory staff login before returning. The owner confirmed both directions work under Apple Guided Access and that reopening staff requires a fresh PIN. The normal mobile staff link has no reception token. See IPAD-NAVIGATION.md for the implementation and checks.
+
+## Stage 5: archive fictional tests and start live staff timekeeping
+
+Only do this once ALL recorded staff time is confirmed fictional. Do not use this procedure to delete or reset genuine hours.
+
+1. In the STAFF project replace Clock.gs and Staff.html with these latest files. Add a Script file named GoLive and paste GoLive.gs.
+2. Save, then update the EXISTING staff web deployment to a new version. This deployment must happen BEFORE running preparation, so the request gate and page-generation checks are active.
+3. Nobody should use the staff page while preparation runs. Run prepareLiveStaffClock manually from the bound editor as the spreadsheet owner. Switch back to the spreadsheet if its confirmation dialog is not visible.
+4. Review the prompt and type TEST ONLY only if all entries are fictional and the new code has been deployed.
+5. The function copies Shifts, Work_Segments, Operations and Corrections into timestamped Archive_ tabs. All values and formulas are checked against the original snapshots before ANY working data row is cleared. It also rechecks the originals and archives immediately before clearing.
+6. It clears only the four working logs, preserving headings and formatting. Staff accounts and all PIN/pepper/device settings are unchanged. It renames the file Choice Staff Timekeeping.
+7. Close and reopen staff on the iPad using its existing reception link. The test banner is replaced after the successful live marker; no second deployment is needed. Sign in and check recorded/ongoing hours start at zero. Make a genuine clock-in only at the actual start of work; this system does not backdate it automatically.
+
+The script records a durable preparation checkpoint before copying. An incomplete checkpoint stops staff RPCs, including recovery writes. If copying fails, no logs are cleared; if later clearing/renaming/marker writing fails, the verified archives stay available. Do not remove checkpoints or rerun clearing blindly: review any interrupted operation first.
+
+A new data-generation identifier is saved at changeover. Already-open staff pages and pending test requests are rejected after go-live, even with a valid PIN. Reloading the page or Retry loading staff obtains the new generation; this avoids turning an old test clock-in retry into a genuine shift after Operations has been emptied. The request gate is checked both before access and after acquiring the action lock.
+
+A successful repeat preparation call does nothing. The spreadsheet owner runs this once from the editor; no public RPC exposes archive/clear actions. Visitor records, reception credentials and deployments are untouched.
+
+Checks: node staff-clock/check-golive.cjs, node staff-clock/check-clock.cjs, node staff-clock/check-ui.cjs and node staff-clock/check-navigation.cjs. These verify backups before clearing, cancellation/owner/layout guards, PIN/account preservation, failed archive/clear/rename/final markers, repeat protection, maintenance races, stale request rejection and page refresh. They use fake services and records; actual Apps Script copies, prompts, deployment updates and the post-changeover iPad check remain manual.
