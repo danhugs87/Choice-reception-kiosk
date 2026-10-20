@@ -69,4 +69,29 @@ ok('tracey','clockIn',{requestId:request(),location:'Choice building'});now+=360
 writeFailure='Shifts';assert.equal(call('dan','closeMissedShift',{requestId:request(),shiftId:changedShift,finishText:format(new Clock(now-60000),'Europe/London','dd/MM/yyyy HH:mm'),reason:'Confirmed finish'}).status,'error');const changedRow=tabs.get('Shifts').rows.find(row=>row[0]===changedShift);changedRow[2]=new Clock(changedRow[2].getTime()+1000);assert.equal(call('tracey','login').status,'error');assert.equal(audit.at(-1)[8],'Pending');
 const html=fs.readFileSync(__dirname+'/Staff.html','utf8');new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);assert(!html.includes('localStorage'));assert(!html.includes('innerHTML'));
 assert(logs.every(line=>!Object.values(pins).some(pin=>line.includes(pin))));
-console.log('PASS: staff clock/PIN flows, role-checked corrections, time validation, original-record audit, partial-correction recovery, pending-action guards, refusal to overwrite changed records, request retries, paid hours and DST boundaries. No live data or real credentials used.');
+// A stale test page must never replay an old action into an empty live log.
+propsMap.set('STAFF_GO_LIVE_CHECKPOINT',JSON.stringify({phase:'complete'}));
+propsMap.set('STAFF_LIVE_PREPARED_AT','2026-10-20T09:00:00.000Z');
+propsMap.set('STAFF_DATA_GENERATION','live_generation');
+const shiftCount=tabs.get('Shifts').rows.length;
+assert.equal(call('dan','clockIn',{requestId:startId,location:'Choice building'}).code,'STALE_LOG');
+assert.equal(tabs.get('Shifts').rows.length,shiftCount);
+assert.equal(context.staffClockRequest({action:'listStaff'}).generation,'live_generation');
+assert.equal(call('dan','login',{generation:'live_generation'}).status,'success');
+propsMap.set('STAFF_GO_LIVE_CHECKPOINT',JSON.stringify({phase:'clearing verified test logs'}));
+for(const action of ['listStaff','login','clockIn'])assert.equal(call('dan',action,{generation:'live_generation',requestId:request(),location:'Choice building'}).code,'MAINTENANCE');
+propsMap.set('STAFF_GO_LIVE_CHECKPOINT',JSON.stringify({phase:'complete'}));
+// Preparation can begin while a request waits for its action lock.
+const originalLocks=context.LockService;let lockCount=0;
+context.LockService={getScriptLock(){const lock=originalLocks.getScriptLock(),wait=lock.waitLock;lock.waitLock=()=>{wait();if(++lockCount===2)propsMap.set('STAFF_GO_LIVE_CHECKPOINT',JSON.stringify({phase:'archiving'}));};return lock;}};
+assert.equal(call('dan','clockIn',{generation:'live_generation',requestId:request(),location:'Choice building'}).code,'MAINTENANCE');
+assert.equal(tabs.get('Shifts').rows.length,shiftCount);context.LockService=originalLocks;
+propsMap.set('STAFF_GO_LIVE_CHECKPOINT','invalid-json');
+assert.equal(call('dan','login',{generation:'live_generation'}).code,'MAINTENANCE');
+propsMap.set('STAFF_GO_LIVE_CHECKPOINT',JSON.stringify({phase:'complete'}));
+// The test banner disappears only after the successful live marker.
+let content=html,title='';
+context.HtmlService={createHtmlOutputFromFile(){return {getContent:()=>content,setContent(v){content=v;return this;},setTitle(v){title=v;return this;},addMetaTag(){return this;}};}};
+context.doGet();assert(!content.includes('TEST SYSTEM'));assert.equal(title,'Choice Staff Clock');
+propsMap.delete('STAFF_LIVE_PREPARED_AT');content=html;context.doGet();assert(content.includes('TEST SYSTEM'));assert.equal(title,'Choice Staff Clock - Test');
+console.log('PASS: staff clock/PIN flows, role-checked corrections, time validation, original-record audit, partial-correction recovery, pending-action guards, refusal to overwrite changed records, request retries, paid hours and DST boundaries. Go-live maintenance, stale-page rejection and banner checks passed. No live data or real credentials used.');
