@@ -1,4 +1,4 @@
-/** Test staff clock: authenticated RPC, paid time and recoverable clock actions. */
+/** Staff clock: authenticated RPC, paid time and recoverable clock actions. */
 var SC_LOCATIONS = ["Choice building", "Working from home", "Off-site work"];
 var SC_OPERATION_HEADERS = ["Request ID", "Staff ID", "Action", "Requested at", "Intent JSON", "Status", "Result"];
 
@@ -28,7 +28,10 @@ function setupStaffClockApp() {
 }
 
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile("Staff").setTitle("Choice Staff Clock - Test")
+  var live = !!PropertiesService.getScriptProperties().getProperty("STAFF_LIVE_PREPARED_AT");
+  var output = HtmlService.createHtmlOutputFromFile("Staff");
+  if (live) output.setContent(output.getContent().replace("TEST SYSTEM · Choice staff timekeeping", "Choice staff timekeeping"));
+  return output.setTitle(live ? "Choice Staff Clock" : "Choice Staff Clock - Test")
     .addMetaTag("viewport", "width=device-width, initial-scale=1");
 }
 
@@ -40,13 +43,15 @@ function staffClockRequest(request) {
     var id = properties.getProperty("STAFF_SPREADSHEET_ID");
     if (!id) throw new Error("Staff setup has not been completed.");
     var ss = SpreadsheetApp.openById(id);
+    var gate = scStaffLogGate_(properties, request); if (gate) return gate;
     if (request.action === "listStaff") {
-      return {status: "success", staff: scPinAccounts_(ss).filter(function(a) { return a.enabled; })
+      return {status: "success", generation: properties.getProperty("STAFF_DATA_GENERATION") || "test", staff: scPinAccounts_(ss).filter(function(a) { return a.enabled; })
         .map(function(a) { return {id: a.id, name: a.name}; })};
     }
     var verified = scVerifyPin_(request.staffId, request.pin);
     if (!verified.ok) return {status: "error", code: "AUTH", message: verified.message};
     lock = LockService.getScriptLock(); lock.waitLock(10000);
+    gate = scStaffLogGate_(properties, request); if (gate) return gate;
     // Recheck role, enabled flag and PIN version after acquiring the action lock.
     var actor = scPinAccounts_(ss).filter(function(a) { return a.id === verified.staffId && a.enabled; })[0];
     var record = scParsePinRecord_(properties.getProperty("STAFF_PIN_" + verified.staffId));
@@ -97,6 +102,24 @@ function staffClockRequest(request) {
     var message = error && error.scBusiness ? error.message : "Unable to confirm the action. Retry the same action or sign in again to recover it. Ask management if it continues.";
     return {status: "error", message: message};
   } finally { if (lock && lock.hasLock()) lock.releaseLock(); }
+}
+
+// Check before reads and again under the action lock: interrupted preparation
+// stays closed, and a page loaded before go-live cannot replay a test action.
+function scStaffLogGate_(properties, request) {
+  var raw = properties.getProperty("STAFF_GO_LIVE_CHECKPOINT");
+  if (raw) {
+    var checkpoint;
+    try { checkpoint = JSON.parse(raw); } catch (_) { checkpoint = {}; }
+    if (checkpoint.phase !== "complete" || !properties.getProperty("STAFF_LIVE_PREPARED_AT")) {
+      return {status: "error", code: "MAINTENANCE", message: "Staff timekeeping is being prepared. Please wait and ask management before clocking."};
+    }
+  }
+  if (request.action !== "listStaff" && properties.getProperty("STAFF_LIVE_PREPARED_AT") &&
+      (!properties.getProperty("STAFF_DATA_GENERATION") || request.generation !== properties.getProperty("STAFF_DATA_GENERATION"))) {
+    return {status: "error", code: "STALE_LOG", message: "The staff log has been updated. Reload this page before signing in or clocking."};
+  }
+  return null;
 }
 
 function scFail_(message) { var error = new Error(message); error.scBusiness = true; throw error; }
