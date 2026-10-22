@@ -115,3 +115,13 @@ A new data-generation identifier is saved at changeover. Already-open staff page
 A successful repeat preparation call does nothing. The spreadsheet owner runs this once from the editor; no public RPC exposes archive/clear actions. Visitor records, reception credentials and deployments are untouched.
 
 Checks: node staff-clock/check-golive.cjs, node staff-clock/check-clock.cjs, node staff-clock/check-ui.cjs and node staff-clock/check-navigation.cjs. These verify backups before clearing, cancellation/owner/layout guards, PIN/account preservation, failed archive/clear/rename/final markers, repeat protection, maintenance races, stale request rejection and page refresh. They use fake services and records; actual Apps Script copies, prompts, deployment updates and the post-changeover iPad check remain manual.
+
+## Hours and minutes on staff screens
+
+The staff dashboard, individual work periods and management weekly overview now display durations as hours and minutes, for example 3 hrs 38 mins. Times are rounded to the nearest whole minute. Weekly totals are calculated from the full recorded timestamps before rounding, rather than from rounded decimal-hour values. Individual period displays may therefore round independently of a weekly total.
+
+Install by replacing Clock.gs and Staff.html in the existing staff Apps Script project, saving, and updating the existing deployment to a new version. Reopen the staff page afterwards. Do not rerun setup, PIN generation or go-live preparation. The existing records, credentials, links, paid-break policy and correction workflow remain in use.
+
+The report API additionally returns recordedMinutes, ongoingMinutes and per-period minutes. Legacy decimal-hour fields are retained for compatibility with existing consumers. New displays prefer the precise minute fields, with a decimal-hour fallback for older deployment responses.
+
+Verification includes 3 hrs 38 mins, 6 mins 25 secs (to avoid double rounding through decimal hours), rollover to an hour, zero and singular durations, team/personal/period displays, existing authentication, correction and navigation checks. No live spreadsheet data was read or changed.
