@@ -28,7 +28,7 @@ assert.equal(call('dan','clockIn',{requestId:request(),location:'Choice building
 now+=2*3600000;data=ok('dan','changeLocation',{requestId:request(),location:'Off-site work',note:'Partner meeting'});assert.equal(data.week.recordedHours,2);assert.equal(data.state.location,'Off-site work');assert.equal(tabs.get('Shifts').rows.length,2);
 now+=3600000;data=ok('dan','getState');assert.equal(data.week.recordedHours,2);assert.equal(data.week.ongoingHours,1);assert.equal(data.week.details.length,2);
 now+=5*3600000;const outId=request();data=ok('dan','clockOut',{requestId:outId});assert(!data.state.working);assert.equal(data.week.recordedHours,8);assert.equal(data.week.ongoingHours,0);assert.equal(tabs.get('Shifts').rows[1][4],'Closed');ok('dan','clockOut',{requestId:outId});assert.equal(tabs.get('Shifts').rows.length,2);
-assert.equal(call('tara','managementWeek',{role:'Management'}).status,'error');const team=ok('dan','managementWeek');assert.equal(team.summary.find(p=>p.name==='Dan').recordedHours,8);
+assert.equal(call('tara','managementWeek',{role:'Management'}).status,'error');const team=ok('dan','managementWeek');assert.equal(team.summary.find(p=>p.name==='Dan').recordedHours,8);assert.equal(team.summary.find(p=>p.name==='Dan').recordedMinutes,480);assert.equal(team.summary.find(p=>p.name==='Dan').ongoingMinutes,0);
 assert.equal(ok('tara','getState').week.recordedHours,0);assert.equal(call('tara','clockIn',{requestId:startId,location:'Choice building'}).status,'error');assert.equal(call('tara','clockIn',{requestId:request(),location:'Off-site work',note:''}).status,'error');
 // Crash between creating a shift and its first segment; login recovers it.
 now+=3600000;appendFailure='Work_Segments';const failedStart=request();assert.equal(call('tara','clockIn',{requestId:failedStart,location:'Working from home',note:'Admin'}).status,'error');assert.equal(context.scPendingOperations_(ss,'tara').length,1);data=ok('tara','login');assert(data.state.working);assert.equal(context.scPendingOperations_(ss,'tara').length,0);const taraSegments=()=>tabs.get('Work_Segments').rows.filter(r=>r[2]==='tara');assert.equal(taraSegments().length,1);
@@ -69,6 +69,16 @@ ok('tracey','clockIn',{requestId:request(),location:'Choice building'});now+=360
 writeFailure='Shifts';assert.equal(call('dan','closeMissedShift',{requestId:request(),shiftId:changedShift,finishText:format(new Clock(now-60000),'Europe/London','dd/MM/yyyy HH:mm'),reason:'Confirmed finish'}).status,'error');const changedRow=tabs.get('Shifts').rows.find(row=>row[0]===changedShift);changedRow[2]=new Clock(changedRow[2].getTime()+1000);assert.equal(call('tracey','login').status,'error');assert.equal(audit.at(-1)[8],'Pending');
 const html=fs.readFileSync(__dirname+'/Staff.html','utf8');new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);assert(!html.includes('localStorage'));assert(!html.includes('innerHTML'));
 assert(logs.every(line=>!Object.values(pins).some(pin=>line.includes(pin))));
+// Minute displays must be derived from exact elapsed time, not the rounded decimal-hour fields.
+const minuteWeek=context.scWeekBounds_('2026-10-19',new Clock());
+for(const [id,seconds,expectedMinutes]of [['six_minutes',385,6],['example_duration',13080,218],['hour_carry',3599,60]]){
+ const begin=Date.parse('2026-10-20T09:00:00Z');
+ tabs.get('Work_Segments').rows.push(['segment_'+id,'shift_'+id,id,'Choice building',new Clock(begin),new Clock(begin+seconds*1000),'','request_'+id]);
+ const report=context.scWeekReport_(ss,id,minuteWeek);
+ assert.equal(report.recordedMinutes,expectedMinutes);assert.equal(report.details[0].minutes,expectedMinutes);
+ assert.equal(report.ongoingMinutes,0);
+ if(id==='six_minutes')assert.equal(report.recordedHours,0.11);
+}
 // A stale test page must never replay an old action into an empty live log.
 propsMap.set('STAFF_GO_LIVE_CHECKPOINT',JSON.stringify({phase:'complete'}));
 propsMap.set('STAFF_LIVE_PREPARED_AT','2026-10-20T09:00:00.000Z');
