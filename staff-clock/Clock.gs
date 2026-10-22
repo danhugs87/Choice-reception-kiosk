@@ -87,7 +87,7 @@ function staffClockRequest(request) {
       return {status: "success", week: week.label, summary: scPinAccounts_(ss).map(function(a) {
         var data = scWeekReport_(ss, a.id, week);
         return {name: a.name, role: a.role, recordedHours: data.recordedHours,
-          ongoingHours: data.ongoingHours, pending: scPendingOperations_(ss, a.id).length > 0 || (typeof scHasPendingStaffCorrection_ === "function" && scHasPendingStaffCorrection_(ss, a.id))};
+          ongoingHours: data.ongoingHours, recordedMinutes: data.recordedMinutes, ongoingMinutes: data.ongoingMinutes, pending: scPendingOperations_(ss, a.id).length > 0 || (typeof scHasPendingStaffCorrection_ === "function" && scHasPendingStaffCorrection_(ss, a.id))};
       })};
     }
     if (typeof scRecoverStaffCorrections_ === "function") scRecoverStaffCorrections_(ss, actor.id);
@@ -249,10 +249,11 @@ function scWeekReport_(ss, id, week) {
     if (!elapsed) return;
     if (row[5]) completed += elapsed; else ongoing += elapsed;
     details.push({start: scDisplayTime_(row[4]), end: row[5] ? scDisplayTime_(row[5]) : "Still open",
-      location: row[3], note: scDisplayText_(row[6]), hours: Math.round(elapsed / 36000) / 100, open: !row[5]});
+      location: row[3], note: scDisplayText_(row[6]), hours: Math.round(elapsed / 36000) / 100, minutes: Math.round(elapsed / 60000), open: !row[5]});
   });
   return {weekStarting: week.label, recordedHours: Math.round(completed / 36000) / 100,
-    ongoingHours: Math.round(ongoing / 36000) / 100, details: details};
+    ongoingHours: Math.round(ongoing / 36000) / 100, recordedMinutes: Math.round(completed / 60000),
+    ongoingMinutes: Math.round(ongoing / 60000), details: details};
 }
 function scDisplayTime_(date) { return Utilities.formatDate(date, "Europe/London", "dd/MM/yyyy HH:mm"); }
 function scCleanClockText_(value, limit) {
